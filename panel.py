@@ -5,116 +5,164 @@ import plotly.express as px
 import os
 
 # --- SAYFA AYARLARI ---
-st.set_page_config(page_title="Hızlı On Numara Analiz & Kupon Jeneratörü", layout="wide")
+st.set_page_config(page_title="Hızlı On Numara Gelişmiş Analiz Paneli", layout="wide")
 
-# --- VERİ BAĞLANTI AYARLARI (GÜNCEL BULUT BAĞLANTISI) ---
+# --- BULUT BAĞLANTISI ---
 GITHUB_CSV_URL = "https://raw.githubusercontent.com/egemenulucay-52/hizli-on-numara/main/hizli_on_numara.csv"
 YEREL_CSV = "hizli_on_numara.csv"
 
-@st.cache_data(ttl=30) # Verileri her 30 saniyede bir arkada otomatik yeniler
+@st.cache_data(ttl=15) # Hızlı güncelleme için önbellek süresini 15 saniyeye düşürdük
 def veriyi_yukle():
     try:
-        # Önce GitHub Actions botunun güncellediği canlı internet dosyasını oku
         df_data = pd.read_csv(GITHUB_CSV_URL)
         return df_data, "Canlı Bulut Verisi (GitHub)"
     except Exception as e:
-        # İnternet linkinde sorun olursa yedek olarak yerel CSV'ye dön
         if os.path.exists(YEREL_CSV):
             df_data = pd.read_csv(YEREL_CSV)
             return df_data, "Yerel Yedek Verisi (Bağlantı Sorunu)"
         else:
             return pd.DataFrame(), "Veri Bulunamadı"
 
-# Veriyi çekiyoruz
 df, veri_kaynagi = veriyi_yukle()
 
 # --- BAŞLIK ---
-st.title("🚀 Hızlı On Numara Canlı Analiz Paneli")
+st.title("🎯 Hızlı On Numara Profesyonel Analiz & Filtreleme Motoru")
 st.sidebar.markdown(f"**Veri Kaynağı:** {veri_kaynagi}")
 
 if df.empty:
     st.error("⚠️ Analiz yapılacak çekiliş verisi henüz yüklenemedi. Botun yeni veriler eklemesi bekleniyor...")
 else:
-    # Sayı kolonlarını netleştirelim (Sayi_1, Sayi_2 ... Sayi_20)
     sayi_kolonlari = [f"Sayi_{i}" for i in range(1, 21)]
-    
-    # Toplam çekiliş sayısını gösterelim
     toplam_cekilis = len(df)
     st.sidebar.metric(label="Sistemdeki Toplam Çekiliş", value=f"{toplam_cekilis} Tur")
     
-    # --- YAN MENÜ: FİLTRELEME ---
-    st.sidebar.header("🎯 Analiz Kapsamı")
-    analiz_adet = st.sidebar.slider("Son Kaç Çekiliş İncelensin?", min_value=1, max_value=max(toplam_cekilis, 10), value=max(toplam_cekilis, 1))
+    # --- YAN MENÜ: GELİŞMİŞ FİLTRELEME ---
+    st.sidebar.header("⚙️ Analiz & Filtre Ayarları")
+    analiz_adet = st.sidebar.slider("İstatistiki Kapsam (Son Kaç Çekiliş?)", min_value=1, max_value=max(toplam_cekilis, 10), value=max(toplam_cekilis, 1))
     
-    # Veriyi kullanıcının seçtiği adet kadar sınırlayalım
+    # Filtre paneli değişkenleri
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🔮 Kupon Filtre Kriterleri")
+    cift_tek_orani = st.sidebar.selectbox("Tek / Çift Dengesi Nasıl Olsun?", ["Fark Etmez", "5 Tek - 5 Çift (Dengeli)", "6 Tek - 4 Çift", "4 Tek - 6 Çift"])
+    ardisik_izin = st.sidebar.checkbox("Ardışık Sayılara İzin Ver (Örn: 23, 24)", value=True)
+    
+    # Veriyi sınırlama
     analiz_df = df.head(analiz_adet)
-    
-    # TÜM SAYILARIN ÇIKMA FREKANSLARINI HESAPLAMA
     tum_sayilar = analiz_df[sayi_kolonlari].values.flatten()
     frekanslar = pd.Series(tum_sayilar).value_counts().reindex(range(1, 81), fill_value=0)
     
-    # --- ÜST ÖZET KARTLARI (METRİKLER) ---
+    # --- ÜST ÖZET KARTLARI ---
     col1, col2, col3 = st.columns(3)
     with col1:
         en_cok_cikan = frekanslar.idxmax()
-        st.metric(label="🔥 En Çok Çıkan Sayı", value=f"Sayı: {en_cok_cikan}", delta=f"{frekanslar[en_cok_cikan]} Kez")
+        st.metric(label="🔥 En Sıcak Şanslı Top", value=f"Sayı: {en_cok_cikan}", delta=f"{frekanslar[en_cok_cikan]} Kez Çıktı")
     with col2:
         en_az_cikan = frekanslar.idxmin()
-        st.metric(label="❄️ En Az Çıkan Sayı", value=f"Sayı: {en_az_cikan}", delta=f"{frekanslar[en_az_cikan]} Kez", delta_color="inverse")
+        st.metric(label="❄️ En Soğuk Şanslı Top", value=f"Sayı: {en_az_cikan}", delta=f"{frekanslar[en_az_cikan]} Kez Çıktı", delta_color="inverse")
     with col3:
         son_cekilis_no = df.iloc[0]["CekilisNo"]
-        st.metric(label="🎰 Son İncelenen Çekiliş", value=f"No: {son_cekilis_no}")
+        st.metric(label="🎰 Son Çekiliş Numarası", value=f"No: {son_cekilis_no}")
 
-    # --- SEKME SİSTEMİ (TAB) ---
-    tab1, tab2, tab3 = st.tabs(["📊 Frekans Grafikleri", "🔮 Akıllı Kupon Üretici", "📋 Son Çekiliş Verileri"])
+    # --- SEKME SİSTEMİ ---
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 Derin Frekans Analizi", "🔮 Matris Tabanlı Kupon Motoru", "📐 Kolon & Bölge Dağılımı", "📋 Canlı Veri Logları"])
     
-    # --- SEKME 1: GRAFİKLER ---
+    # --- SEKME 1: FREKANS GRAFİKLERİ ---
     with tab1:
-        st.subheader(f"Son {analiz_adet} Çekilişte Sayıların Çıkma Sıklığı (1 - 80)")
-        grafik_df = pd.DataFrame({"Sayı": frekanslar.index, "Çıkma Sayısı": frekanslar.values})
-        fig = px.bar(grafik_df, x="Sayı", y="Çıkma Sayısı", labels={"Sayı": "Şanslı Toplar", "Çıkma Sayısı": "Görülme Sıklığı"},
-                     color="Çıkma Sayısı", color_continuous_scale="Purples")
-        fig.update_layout(xaxis=dict(tickmode='linear', tick0=1, dtick=2))
+        st.subheader("📊 Tüm Sayıların Dağılım ve Görülme Frekansı")
+        grafik_df = pd.DataFrame({"Sayı": frekanslar.index, "Çıkma Sayısı": frekanslar.values}).sort_values(by="Sayı")
+        fig = px.bar(grafik_df, x="Sayı", y="Çıkma Sayısı", color="Çıkma Sayısı", color_continuous_scale="Viridis", labels={"Çıkma Sayısı":"Frekans"})
+        fig.update_layout(xaxis=dict(tickmode='linear', tick0=1, dtick=2), barcode_gap=0.1)
         st.plotly_chart(fig, use_container_width=True)
 
-    # --- SEKME 2: AKILLI KUPON ÜRETİCİ ---
+    # --- SEKME 2: DETAYLI KUPON ÜRETİCİ ---
     with tab2:
-        st.subheader("🧙‍♂️ İstatistik Tabanlı Akıllı Kupon Üretici")
-        st.write("Sistem, güncel çekiliş havuzundaki sayıların durumuna göre sana en ideal kombinasyonları üretir.")
+        st.subheader("🧙‍♂️ Yapay Zeka ve Matematiksel Filtreli Kupon Jeneratörü")
+        st.write("Aşağıdaki strateji ve yan menüdeki filtreleri birleştirerek kurallı kuponlar üretebilirsiniz.")
         
-        kupon_turu = st.radio("Kupon Stratejisi Seçin:", 
-                              ["🔥 Sıcak Sayılar (En Çok Çıkanlar)", 
-                               "❄️ Soğuk Sayılar (En Az Çıkanlar)", 
-                               "🎹 Dengeli Karma (Sıcak, Soğuk ve Sürpriz Karışık)"])
+        kupon_turu = st.radio("Ana İstatistik Algoritması:", 
+                              ["🔥 Saf Sıcaklık Algoritması (En Çok Çıkan Havuzu)", 
+                               "❄️ Saf Soğukluk Algoritması (Yıldızı Parlayacaklar)", 
+                               "🎹 Matematiksel Karma (Dengeli Dağılım Modeli)"], horizontal=True)
         
-        # Buton tetikleyicisi tamir edildi ve görünür hale getirildi
-        if st.button("🌟 Akıllı 10 Numara Kuponu Oluştur"):
+        adet_kupon = st.slider("Kaç Adet Kupon Üretilsin?", min_value=1, max_value=10, value=1)
+        
+        if st.button("🎰 Kriterlere Uygun Akıllı Kupon(ları) Üret"):
             sirali_sayilar = frekanslar.sort_values(ascending=False).index.tolist()
             
-            # Eğer havuzda yeterli veri yoksa (Sistem henüz yeni kurulduysa) tüm sayılardan rastgele seç
-            if len(df) < 5:
-                kupon = sorted(np.random.choice(range(1, 81), 10, replace=False))
+            # Ana havuz belirleme
+            if "Saf Sıcaklık" in kupon_turu:
+                ana_havuz = sirali_sayilar[:30]
+            elif "Saf Soğukluk" in kupon_turu:
+                ana_havuz = sirali_sayilar[-30:]
             else:
-                if "Sıcak Sayılar" in kupon_turu:
-                    secilecek_havuz = sirali_sayilar[:25]
-                    kupon = sorted(np.random.choice(secilecek_havuz, 10, replace=False))
-                elif "Soğuk Sayılar" in kupon_turu:
-                    secilecek_havuz = sirali_sayilar[-25:]
-                    kupon = sorted(np.random.choice(secilecek_havuz, 10, replace=False))
-                else:
-                    sicaklar = np.random.choice(sirali_sayilar[:20], 4, replace=False).tolist()
-                    soguklar = np.random.choice(sirali_sayilar[-20:], 4, replace=False).tolist()
-                    kalan_havuz = [s for s in range(1, 81) if s not in sicaklar and s not in soguklar]
-                    surprizler = np.random.choice(kalan_havuz, 2, replace=False).tolist()
-                    kupon = sorted(sicaklar + soguklar + surprizler)
+                ana_havuz = list(range(1, 81))
                 
-            # Kupon Görsel Tasarımı
-            st.markdown("### 🎫 Önerilen Şanslı Kuponunuz:")
-            kupon_html = " ".join([f"<span style='display:inline-block; background-color:#6A1B9A; color:white; border-radius:50%; width:45px; height:45px; text-align:center; line-height:45px; font-weight:bold; font-size:18px; margin:5px;'>{num}</span>" for num in kupon])
-            st.markdown(kupon_html, unsafe_allow_html=True)
+            basarili_kuponlar = []
+            deneme_sayaci = 0
+            
+            # Filtre motoru döngüsü
+            while len(basarili_kuponlar) < adet_kupon and deneme_sayaci < 1000:
+                deneme_sayaci += 1
+                
+                # Eğer havuzda yeterli ayırt edici veri yoksa genel havuzdan seç
+                if len(df) < 3:
+                    aday_kupon = sorted(np.random.choice(range(1, 81), 10, replace=False).tolist())
+                else:
+                    aday_kupon = sorted(np.random.choice(ana_havuz, 10, replace=False).tolist())
+                
+                # FİLTRE 1: Tek/Çift Kontrolü
+                tekler = [n for n in aday_kupon if n % 2 != 0]
+                ciftler = [n for n in aday_kupon if n % 2 == 0]
+                
+                if cift_tek_orani == "5 Tek - 5 Çift (Dengeli)" and (len(tekler) != 5 or len(ciftler) != 5):
+                    continue
+                if cift_tek_orani == "6 Tek - 4 Çift" and (len(tekler) != 6 or len(ciftler) != 4):
+                    continue
+                if cift_tek_orani == "4 Tek - 6 Çift" and (len(tekler) != 4 or len(ciftler) != 6):
+                    continue
+                    
+                # FİLTRE 2: Ardışık Sayı Kontrolü (Örn: Kuponda peş peşe sayılar var mı?)
+                if not ardisik_izin:
+                    has_ardisik = False
+                    for idx in range(len(aday_kupon) - 1):
+                        if aday_kupon[idx+1] - aday_kupon[idx] == 1:
+                            has_ardisik = True
+                            break
+                    if has_ardisik:
+                        continue
+                
+                if aday_kupon not in basarili_kuponlar:
+                    basarili_kuponlar.append(aday_kupon)
+            
+            # Sonuç ekranı tasarımı
+            st.markdown(f"### 🎫 Kriterlerinize Uygun Üretilen {len(basarili_kuponlar)} Şanslı Kupon:")
+            for k_idx, kpn in enumerate(basarili_kuponlar, 1):
+                kupon_html = " ".join([f"<span style='display:inline-block; background-color:#1565C0; color:white; border-radius:50%; width:42px; height:42px; text-align:center; line-height:42px; font-weight:bold; font-size:16px; margin:4px;'>{num}</span>" for num in kpn])
+                st.markdown(f"**Kupon {k_idx}:** {kupon_html}", unsafe_allow_html=True)
+            
+            st.caption(f"Filtre motoru {deneme_sayaci} kombinasyon tarayarak en ideal eşleşmeleri seçti.")
             st.balloons()
 
-    # --- SEKME 3: VERİ TABLOSU ---
+    # --- SEKME 3: GEOMETRİK BÖLGE VE MATRİS ANALİZİ ---
     with tab3:
-        st.subheader("📋 Sistemde Kayıtlı Kronolojik Çekiliş Listesi")
+        st.subheader("📐 Sayıların Matrisel Dağılım Yoğunluğu (1-80 Tablosu)")
+        st.write("Sayıların 1-80 kupon kağıdındaki bölgelere göre çıkma yoğunluğu. Koyu renkler o bölgelerin daha çok geldiğini gösterir.")
+        
+        # 1-80 şablonu oluşturma (8 satır x 10 kolon)
+        matris_verisi = np.zeros((8, 10))
+        for s in range(1, 81):
+            satir = (s - 1) // 10
+            sutun = (s - 1) % 10
+            matris_verisi[satir, sutun] = frekanslar.get(s, 0)
+            
+        fig_matris = px.imshow(matris_verisi,
+                               labels=dict(x="Kolonlar", y="Satırlar", color="Çıkma Sıklığı"),
+                               x=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
+                               y=['1-10', '11-20', '21-30', '31-40', '41-50', '51-60', '61-70', '71-80'],
+                               color_continuous_scale="Purples")
+        st.plotly_chart(fig_matris, use_container_width=True)
+
+    # --- SEKME 4: KRONOLOJİK LİSTE ---
+    with tab4:
+        st.subheader("📋 Veri Tabanında Kayıtlı Olan Çekilişler")
         st.dataframe(analiz_df, use_container_width=True)
