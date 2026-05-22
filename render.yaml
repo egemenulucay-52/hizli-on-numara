@@ -1,0 +1,14 @@
+services:
+  # 🚀 ANALİZ PANELİ VE JENERATÖR (WEB SİTESİ)
+  - type: web
+    name: hizli-on-numara-panel
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m streamlit run panel.py --server.port $PORT --server.address 0.0.0.0
+
+  # 🤖 ARKA PLAN VERİ TOPLAMA BOTU (7/24 ÇALIŞAN İŞÇİ)
+  - type: worker
+    name: hizli-on-numara-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python veri_cekici.py
