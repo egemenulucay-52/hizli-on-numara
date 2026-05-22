@@ -11,7 +11,7 @@ st.set_page_config(page_title="Hızlı On Numara Gelişmiş Analiz Paneli", layo
 GITHUB_CSV_URL = "https://raw.githubusercontent.com/egemenulucay-52/hizli-on-numara/main/hizli_on_numara.csv"
 YEREL_CSV = "hizli_on_numara.csv"
 
-@st.cache_data(ttl=15) # Hızlı güncelleme için önbellek süresini 15 saniyeye düşürdük
+@st.cache_data(ttl=15)
 def veriyi_yukle():
     try:
         df_data = pd.read_csv(GITHUB_CSV_URL)
@@ -40,7 +40,6 @@ else:
     st.sidebar.header("⚙️ Analiz & Filtre Ayarları")
     analiz_adet = st.sidebar.slider("İstatistiki Kapsam (Son Kaç Çekiliş?)", min_value=1, max_value=max(toplam_cekilis, 10), value=max(toplam_cekilis, 1))
     
-    # Filtre paneli değişkenleri
     st.sidebar.markdown("---")
     st.sidebar.subheader("🔮 Kupon Filtre Kriterleri")
     cift_tek_orani = st.sidebar.selectbox("Tek / Çift Dengesi Nasıl Olsun?", ["Fark Etmez", "5 Tek - 5 Çift (Dengeli)", "6 Tek - 4 Çift", "4 Tek - 6 Çift"])
@@ -71,7 +70,7 @@ else:
         st.subheader("📊 Tüm Sayıların Dağılım ve Görülme Frekansı")
         grafik_df = pd.DataFrame({"Sayı": frekanslar.index, "Çıkma Sayısı": frekanslar.values}).sort_values(by="Sayı")
         fig = px.bar(grafik_df, x="Sayı", y="Çıkma Sayısı", color="Çıkma Sayısı", color_continuous_scale="Viridis", labels={"Çıkma Sayısı":"Frekans"})
-        fig.update_layout(xaxis=dict(tickmode='linear', tick0=1, dtick=2), barcode_gap=0.1)
+        fig.update_layout(xaxis=dict(tickmode='linear', tick0=1, dtick=2), bargap=0.1) # HATA DÜZELTİLDİ: bargap yapıldı
         st.plotly_chart(fig, use_container_width=True)
 
     # --- SEKME 2: DETAYLI KUPON ÜRETİCİ ---
@@ -89,7 +88,6 @@ else:
         if st.button("🎰 Kriterlere Uygun Akıllı Kupon(ları) Üret"):
             sirali_sayilar = frekanslar.sort_values(ascending=False).index.tolist()
             
-            # Ana havuz belirleme
             if "Saf Sıcaklık" in kupon_turu:
                 ana_havuz = sirali_sayilar[:30]
             elif "Saf Soğukluk" in kupon_turu:
@@ -100,17 +98,14 @@ else:
             basarili_kuponlar = []
             deneme_sayaci = 0
             
-            # Filtre motoru döngüsü
             while len(basarili_kuponlar) < adet_kupon and deneme_sayaci < 1000:
                 deneme_sayaci += 1
                 
-                # Eğer havuzda yeterli ayırt edici veri yoksa genel havuzdan seç
                 if len(df) < 3:
                     aday_kupon = sorted(np.random.choice(range(1, 81), 10, replace=False).tolist())
                 else:
                     aday_kupon = sorted(np.random.choice(ana_havuz, 10, replace=False).tolist())
                 
-                # FİLTRE 1: Tek/Çift Kontrolü
                 tekler = [n for n in aday_kupon if n % 2 != 0]
                 ciftler = [n for n in aday_kupon if n % 2 == 0]
                 
@@ -121,7 +116,6 @@ else:
                 if cift_tek_orani == "4 Tek - 6 Çift" and (len(tekler) != 4 or len(ciftler) != 6):
                     continue
                     
-                # FİLTRE 2: Ardışık Sayı Kontrolü (Örn: Kuponda peş peşe sayılar var mı?)
                 if not ardisik_izin:
                     has_ardisik = False
                     for idx in range(len(aday_kupon) - 1):
@@ -134,7 +128,6 @@ else:
                 if aday_kupon not in basarili_kuponlar:
                     basarili_kuponlar.append(aday_kupon)
             
-            # Sonuç ekranı tasarımı
             st.markdown(f"### 🎫 Kriterlerinize Uygun Üretilen {len(basarili_kuponlar)} Şanslı Kupon:")
             for k_idx, kpn in enumerate(basarili_kuponlar, 1):
                 kupon_html = " ".join([f"<span style='display:inline-block; background-color:#1565C0; color:white; border-radius:50%; width:42px; height:42px; text-align:center; line-height:42px; font-weight:bold; font-size:16px; margin:4px;'>{num}</span>" for num in kpn])
@@ -146,9 +139,7 @@ else:
     # --- SEKME 3: GEOMETRİK BÖLGE VE MATRİS ANALİZİ ---
     with tab3:
         st.subheader("📐 Sayıların Matrisel Dağılım Yoğunluğu (1-80 Tablosu)")
-        st.write("Sayıların 1-80 kupon kağıdındaki bölgelere göre çıkma yoğunluğu. Koyu renkler o bölgelerin daha çok geldiğini gösterir.")
         
-        # 1-80 şablonu oluşturma (8 satır x 10 kolon)
         matris_verisi = np.zeros((8, 10))
         for s in range(1, 81):
             satir = (s - 1) // 10
