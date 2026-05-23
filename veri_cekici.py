@@ -13,7 +13,7 @@ def canli_cekilis_takip_et():
     options.add_argument("--headless=new") 
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--window-size=1200,1000")
+    options.add_argument("--window-size=1200,1200")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
     
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
@@ -22,11 +22,11 @@ def canli_cekilis_takip_et():
     
     try:
         driver.get("https://www.millipiyangoonline.com/hizli-on-numara/cekilis-sonuclari")
-        time.sleep(8)
+        time.sleep(10)
         
-        # --- SİTENİN HİLESİNİ BOZAN BÖLÜM: SAYFAYI AŞAĞI KAYDIRMA ---
+        # --- SAYFAYI GEÇMİŞE DOĞRU KAYDIRMA ---
         print("📜 Eski çekilişleri yüklemek için sayfa aşağı kaydırılıyor...")
-        for _ in range(5): # 5 kez aşağı kaydırarak geçmiş turları HTML'e zorla yükletiyoruz
+        for _ in range(4):
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(2)
             
@@ -38,46 +38,51 @@ def canli_cekilis_takip_et():
                     mevcut_cekilisler = set(eski_df["CekilisNo"].astype(str).tolist())
             except: pass
 
-        # Sitenin güncel satır yapılarını hedef alıyoruz
-        satirlar = driver.find_elements(By.XPATH, "//div[contains(@class, 'results-content-item')] | //div[contains(@class, 'accordion-item')]")
-        print(f"👁️ Sayfada taranabilir {len(satirlar)} veri bloku bulundu.")
+        # GENİŞLETİLMİŞ VE KESİN XPATH: Sitedeki tüm sonuç paneli yapılarını (hem accordion hem de düz listeleri) yakalar
+        satirlar = driver.find_elements(By.XPATH, "//*[contains(@class, 'item') or contains(@class, 'content') or contains(@class, 'result')]")
         
         yeni_eklenen_ler = []
+        islenen_cekilisler = set() # Aynı turda mükerrer işlemeyi engellemek için
         
         for satir in satirlar:
             try:
                 metin = satir.text
-                if "Çekiliş no" not in metin and "No:" not in metin: continue
+                if not metin or ("Çekiliş no" not in metin and "No:" not in metin): continue
                 
-                # Çekiliş numarasını temizce ayıklama
+                # Çekiliş numarasını bulma
                 c_no = ""
                 for s in metin.split("\n"):
                     if "Çekiliş no" in s or "No:" in s:
                         c_no = "".join(filter(str.isdigit, s))
                         break
                 
-                if not c_no or c_no in mevcut_cekilisler: continue
-                    
-                # Sayı toplarını bulma
-                toplar = satir.find_elements(By.XPATH, ".//div[contains(@class, 'numbers-item')] | .//span[contains(@class, 'ball')]")
+                if not c_no or c_no in mevcut_cekilisler or c_no in islenen_cekilisler: continue
+                
+                # O satırın altındaki tüm şanslı topları (ball veya numbers-item sınıflarını) topluyoruz
+                toplar = satir.find_elements(By.XPATH, ".//*[contains(@class, 'ball') or contains(@class, 'number')]")
                 gecici_sayilar = []
+                
                 for top in toplar:
                     top_metni = top.text.strip()
                     if top_metni.isdigit() and 1 <= int(top_metni) <= 80:
                         val = int(top_metni)
-                        if val not in gecici_sayilar: gecici_sayilar.append(val)
+                        if val not in gecici_sayilar: 
+                            gecici_sayilar.append(val)
                 
-                # Eğer tam 20 tane top başarıyla ayıklandıysa listeye ekle
+                # Hızlı On Numara'da tam 20 sayı olmalı
                 if len(gecici_sayilar) == 20:
                     gecici_sayilar.sort()
                     satir_verisi = {"Tarih": time.strftime('%Y-%m-%d %H:%M:%S'), "CekilisNo": c_no}
                     for i, s in enumerate(gecici_sayilar, start=1):
                         satir_verisi[f"Sayi_{i}"] = s
                     yeni_eklenen_ler.append(satir_verisi)
+                    islenen_cekilisler.add(c_no)
                     print(f"✨ Yeni Çekiliş Yakalandı: {c_no}")
             except: continue
         
-        # --- VERİ TABANINI KAYDETME VE BİRLEŞTİRME ---
+        print(f"👁️ Toplam {len(yeni_eklenen_ler)} yeni benzersiz çekiliş işleme hazırlandı.")
+        
+        # --- VERİ TABANINI GÜNCELLEME ---
         if yeni_eklenen_ler:
             yeni_df = pd.DataFrame(yeni_eklenen_ler)
             if os.path.exists(CSV_DOSYASI):
