@@ -18,17 +18,16 @@ def canli_cekilis_takip_et():
     
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     
-    print("🚀 GITHUB BULUT BOTU ATEŞLENDİ!")
+    print("🚀 GITHUB BULUT BOTU YENİ SAYFADA ATEŞLENDİ!")
     
     try:
-        driver.get("https://www.millipiyangoonline.com/hizli-on-numara/cekilis-sonuclari")
+        # Senin önerdiğin o temiz, düz listeli sonuç sayfasına gidiyoruz
+        driver.get("https://www.millipiyangoonline.com/hizli-on-numara/sonuclar")
         time.sleep(10)
         
-        # --- SAYFAYI GEÇMİŞE DOĞRU KAYDIRMA ---
-        print("📜 Eski çekilişleri yüklemek için sayfa aşağı kaydırılıyor...")
-        for _ in range(4):
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(2)
+        # Sayfayı geçmişe doğru yükletmek için yine de hafifçe aşağı kaydırıyoruz
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(3)
             
         mevcut_cekilisler = set()
         if os.path.exists(CSV_DOSYASI):
@@ -38,28 +37,32 @@ def canli_cekilis_takip_et():
                     mevcut_cekilisler = set(eski_df["CekilisNo"].astype(str).tolist())
             except: pass
 
-        # GENİŞLETİLMİŞ VE KESİN XPATH: Sitedeki tüm sonuç paneli yapılarını (hem accordion hem de düz listeleri) yakalar
-        satirlar = driver.find_elements(By.XPATH, "//*[contains(@class, 'item') or contains(@class, 'content') or contains(@class, 'result')]")
+        # Yeni sonuçlar sayfasındaki satır elementlerini çok geniş bir ağla yakalıyoruz
+        satirlar = driver.find_elements(By.XPATH, "//*[contains(@class, 'draw-item') or contains(@class, 'result-row') or contains(@class, 'accordion-item') or contains(@class, 'table-row')]")
         
         yeni_eklenen_ler = []
-        islenen_cekilisler = set() # Aynı turda mükerrer işlemeyi engellemek için
+        islenen_cekilisler = set()
         
         for satir in satirlar:
             try:
                 metin = satir.text
-                if not metin or ("Çekiliş no" not in metin and "No:" not in metin): continue
+                if not metin: continue
                 
-                # Çekiliş numarasını bulma
+                # Çekiliş numarasını (ID veya No) bulma mantığı
                 c_no = ""
                 for s in metin.split("\n"):
-                    if "Çekiliş no" in s or "No:" in s:
-                        c_no = "".join(filter(str.isdigit, s))
-                        break
+                    s_clean = s.lower().strip()
+                    if "no" in s_clean or "çekiliş" in s_clean or s_clean.isdigit():
+                        # Sadece rakamları ayıkla
+                        potansiyel_no = "".join(filter(str.isdigit, s))
+                        if len(potansiyel_no) >= 4: # Gerçekçi bir çekiliş numarası uzunluğu kontrolü
+                            c_no = potansiyel_no
+                            break
                 
                 if not c_no or c_no in mevcut_cekilisler or c_no in islenen_cekilisler: continue
                 
-                # O satırın altındaki tüm şanslı topları (ball veya numbers-item sınıflarını) topluyoruz
-                toplar = satir.find_elements(By.XPATH, ".//*[contains(@class, 'ball') or contains(@class, 'number')]")
+                # O satırdaki şanslı topları topluyoruz
+                toplar = satir.find_elements(By.XPATH, ".//*[contains(@class, 'ball') or contains(@class, 'number') or contains(@class, 'numbers-item')]")
                 gecici_sayilar = []
                 
                 for top in toplar:
@@ -69,7 +72,7 @@ def canli_cekilis_takip_et():
                         if val not in gecici_sayilar: 
                             gecici_sayilar.append(val)
                 
-                # Hızlı On Numara'da tam 20 sayı olmalı
+                # Tam 20 şanslı sayı varsa listeye ekle
                 if len(gecici_sayilar) == 20:
                     gecici_sayilar.sort()
                     satir_verisi = {"Tarih": time.strftime('%Y-%m-%d %H:%M:%S'), "CekilisNo": c_no}
@@ -77,12 +80,10 @@ def canli_cekilis_takip_et():
                         satir_verisi[f"Sayi_{i}"] = s
                     yeni_eklenen_ler.append(satir_verisi)
                     islenen_cekilisler.add(c_no)
-                    print(f"✨ Yeni Çekiliş Yakalandı: {c_no}")
+                    print(f"✨ Yeni Sayfadan Çekiliş Yakalandı: {c_no}")
             except: continue
         
-        print(f"👁️ Toplam {len(yeni_eklenen_ler)} yeni benzersiz çekiliş işleme hazırlandı.")
-        
-        # --- VERİ TABANINI GÜNCELLEME ---
+        # --- VERİ TABANI BİRLEŞTİRME ---
         if yeni_eklenen_ler:
             yeni_df = pd.DataFrame(yeni_eklenen_ler)
             if os.path.exists(CSV_DOSYASI):
@@ -94,13 +95,13 @@ def canli_cekilis_takip_et():
             toplam_df["CekilisNo"] = toplam_df["CekilisNo"].astype(str)
             toplam_df = toplam_df.drop_duplicates(subset=["CekilisNo"]).sort_values(by="CekilisNo", ascending=False)
             toplam_df.to_csv(CSV_DOSYASI, index=False, encoding='utf-8')
-            print(f"💾 CSV Güncellendi. Toplam satır sayısı: {len(toplam_df)}")
+            print(f"💾 CSV Yeni Verilerle Güncellendi! Toplam satır sayısı: {len(toplam_df)}")
         else:
-            print("💤 Yeni veya farklı bir çekiliş bulunamadı.")
+            print("💤 Yeni veya farklı bir çekiliş şablonu bulunamadı.")
             
         driver.quit()
     except Exception as e:
-        print(f"❌ Hata: {e}")
+        print(f"❌ Hata oluştu: {e}")
         driver.quit()
 
 if __name__ == "__main__":
