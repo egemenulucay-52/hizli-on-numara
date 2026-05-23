@@ -193,7 +193,7 @@ else:
         st.write("Sayıların geçmiş döngü ortalamaları ve standart sapmaları hesaplanır. Gerilim puanı **yüksek (özellikle 2.0 ve üzeri)** olan sayılar, kendi varyans sınırlarını aşırı esnetmişlerdir ve her an patlama yapmaya mecburdurlar.")
         
         top_varyans = df_mv.sort_values(by="Varyans_Gerilimi", ascending=False).head(15)
-        fig_var = px.bar(top_varyans, x="Sayı", y="Varyans_Gerilimi", color="Varyans_Gerilimi", color_continuous_scale="Gold", height=320)
+        fig_var = px.bar(top_varyans, x="Sayı", y="Varyans_Gerilimi", color="Varyans_Gerilimi", color_continuous_scale="solar", height=320)
         fig_var.update_layout(xaxis=dict(type='category'))
         st.plotly_chart(fig_var, use_container_width=True)
         
