@@ -3,7 +3,7 @@ name: 7/24 Canli Veri Toplayici
 on:
   schedule:
     # Her 5 dakikada bir otomatik tetiklenir
-    - cron: '*/5 * * * *'
+    - cron: '3,18,33,48 * * * *'
   workflow_dispatch: # İstediğimizde elle de başlatabilmek için
 
 jobs:
