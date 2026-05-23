@@ -8,7 +8,7 @@ import istatistik  # Matematik motorumuz bağlı
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="Hızlı On Numara Kuantum Analiz Terminali", layout="wide")
 
-# --- BULUT BAĞLANTISI (RAM dostu önbellek süresi artırıldı) ---
+# --- BULUT BAĞLANTISI ---
 GITHUB_CSV_URL = "https://raw.githubusercontent.com/egemenulucay-52/hizli-on-numara/main/hizli_on_numara.csv"
 YEREL_CSV = "hizli_on_numara.csv"
 
@@ -49,7 +49,7 @@ else:
     tum_sayilar = analiz_df[sayi_kolonlari].values.flatten()
     frekanslar = pd.Series(tum_sayilar).value_counts().reindex(range(1, 81), fill_value=0)
     
-    # --- 💥 Gelişmiş Önbellek Motoru (Ağır Hesaplamaları Hafızaya Alma) ---
+    # --- 💥 GELİŞMİŞ ÖNBELLEK MOTORU ---
     @st.cache_data(ttl=60)
     def cached_gecikme_analizi(_df_slice):
         return istatistik.gecikme_derinligi_analizi(_df_slice, sayi_kolonlari)
@@ -65,13 +65,57 @@ else:
     @st.cache_data(ttl=60)
     def cached_markov_zinciri_matrisi(_df_slice):
         return istatistik.markov_zinciri_matrisi(_df_slice, sayi_kolonlari)
+
+    # --- 📈 STRATEJİ 2 & 3: MACD VE VARYANS MOTORU (YENİ) ---
+    @st.cache_data(ttl=60)
+    def cached_macd_ve_varyans_analizi(_df):
+        df_len = len(_df)
+        short_len = min(15, df_len)
+        long_len = min(150, df_len)
+        
+        short_vals = _df.head(short_len)[sayi_kolonlari].values.flatten()
+        long_vals = _df.head(long_len)[sayi_kolonlari].values.flatten()
+        
+        short_freq = pd.Series(short_vals).value_counts().reindex(range(1, 81), fill_value=0) / short_len
+        long_freq = pd.Series(long_vals).value_counts().reindex(range(1, 81), fill_value=0) / long_len
+        
+        macd_scores = short_freq - long_freq
+        
+        wake_up_scores, mean_gaps, std_gaps, current_gaps = {}, {}, {}, {}
+        
+        for num in range(1, 81):
+            appears = np.where((_df[sayi_kolonlari] == num).any(axis=1))[0]
+            if len(appears) > 1:
+                gaps = np.diff(appears)
+                mean_g = float(np.mean(gaps))
+                std_g = float(np.std(gaps)) if len(gaps) > 1 else 1.0
+                curr_g = float(appears[0])
+                wake_up = (curr_g - mean_g) / std_g if std_g > 0 else 0.0
+            else:
+                mean_g, std_g, wake_up = 4.0, 2.0, 0.0
+                curr_g = float(appears[0]) if len(appears) > 0 else float(df_len)
+                
+            wake_up_scores[num] = wake_up
+            mean_gaps[num] = mean_g
+            std_gaps[num] = std_g
+            current_gaps[num] = curr_g
+            
+        return pd.DataFrame({
+            "Sayı": range(1, 81),
+            "MACD_Skoru": macd_scores.values,
+            "Mevcut_Gecikme": [current_gaps[n] for n in range(1, 81)],
+            "Ortalama_Dongu": [mean_gaps[n] for n in range(1, 81)],
+            "Standart_Sapma": [std_gaps[n] for n in range(1, 81)],
+            "Varyans_Gerilimi": [wake_up_scores[n] for n in range(1, 81)]
+        })
     
-    # Hesaplamaları çağırma
+    # Hesaplama Tetikleyicileri
     df_gecikme = cached_gecikme_analizi(analiz_df)
+    df_mv = cached_macd_ve_varyans_analizi(df)  # Güçlü analiz için tüm datayı tarar
     
     chi2_stat, p_value = istatistik.ki_kare_testi(analiz_df, sayi_kolonlari)
     if p_value > 0.05:
-        st.success(f"🎲 **Rastlantısallık Denetimi:** Sistem %95 güvenilirlikle tamamen adilและrastgele çalışıyor. (p-değeri: {p_value:.4f})")
+        st.success(f"🎲 **Rastlantısallık Denetimi:** Sistem %95 güvenilirlikle tamamen adil ve rastgele çalışıyor. (p-değeri: {p_value:.4f})")
     else:
         st.warning(f"⚠️ **Rastlantısallık Sapması:** Sayı dağılımlarında teorik sınırın dışında kümelenmeler saptandı! (p-değeri: {p_value:.4f})")
 
@@ -83,10 +127,12 @@ else:
     with col3:
         st.metric(label="🎰 Son Çekiliş No", value=f"No: {df.iloc[0]['CekilisNo']}")
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📊 Frekans & Gecikme Analizi", 
-        "🧠 Rastlantısallık & Kaos (Quant)", 
-        "⛓️ Markov Zinciri Bağlantıları", 
+    # --- 6'LI YENİ SEKME SİSTEMİ ---
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "📊 Frekans & Gecikme", 
+        "🧠 Rastlantısallık & Kaos", 
+        "📈 Trend & Varyans (Lag-3 Çözümü)", 
+        "⛓️ Markov Zinciri", 
         "🔮 Akıllı Kupon Motoru", 
         "📋 Canlı Veri Havuzu"
     ])
@@ -105,34 +151,18 @@ else:
         st.dataframe(top_gecikme, use_container_width=True)
 
     with tab2:
-        # --- 📈 MERKEZİ EĞİLİM VE ORTALAMALAR ANALİZİ (YENİ EKLEME) ---
         st.subheader("📈 Veri Kümesinin Merkezi Eğilim ve Ortalamalar Analizi")
-        st.write("Sayıların aritmetik ve geometrik merkezkaç kuvveti. Teorik olarak hilesiz bir 1-80 sisteminde dengelenme noktası **40.50**'dir.")
-        
-        # Matematiksel Ortalama Hesaplamaları
         aritmetik_ort = float(np.mean(tum_sayilar))
         geometrik_ort = float(np.exp(np.mean(np.log(tum_sayilar))))
         medyan_deger = float(np.median(tum_sayilar))
         
         c_ort1, c_ort2, c_ort3 = st.columns(3)
         with c_ort1:
-            st.metric(
-                label="🧮 Genel Aritmetik Ortalama", 
-                value=f"{aritmetik_ort:.2f}", 
-                delta=f"{aritmetik_ort - 40.50:+.2f} (Teorik Sapma)",
-                delta_color="normal" if abs(aritmetik_ort - 40.50) < 0.5 else "inverse"
-            )
+            st.metric(label="🧮 Genel Aritmetik Ortalama", value=f"{aritmetik_ort:.2f}", delta=f"{aritmetik_ort - 40.50:+.2f} (Teorik Sapma)")
         with c_ort2:
-            st.metric(
-                label="📐 Genel Geometrik Ortalama", 
-                value=f"{geometrik_ort:.2f}",
-                help="Geometrik ortalama, ekstrem dalgalanmaları törpüleyerek gerçek çekim merkezini gösterir."
-            )
+            st.metric(label="📐 Genel Geometrik Ortalama", value=f"{geometrik_ort:.2f}")
         with c_ort3:
-            st.metric(
-                label="⚖️ Olasılık Dengesi (Medyan)", 
-                value=f"{medyan_deger:.1f}"
-            )
+            st.metric(label="⚖️ Olasılık Dengesi (Medyan)", value=f"{medyan_deger:.1f}")
             
         st.markdown("---")
         st.subheader("📐 Hipergeometrik Tur Geçiş Analizi (Overlap)")
@@ -148,7 +178,30 @@ else:
         fig_ent.update_layout(showlegend=False)
         st.plotly_chart(fig_ent, use_container_width=True)
 
+    # --- 🔥 YENİ SEKME 3: TREND VE VARYANS LABORATUVARI ---
     with tab3:
+        st.subheader("📊 Strateji 2: Loto MACD Trend ve Momentum Analizi")
+        st.write("Son 15 çekilişin ivmesi ile son 150 çekilişin makro frekansı kıyaslanır. Skoru **pozitif ve yüksek** olan sayılar yükselen trenddedir ve 3 tur geriden gelsen dahi ivmesini korur.")
+        
+        top_macd = df_mv.sort_values(by="MACD_Skoru", ascending=False).head(15)
+        fig_macd = px.bar(top_macd, x="Sayı", y="MACD_Skoru", color="MACD_Skoru", color_continuous_scale="Reds", height=320)
+        fig_macd.update_layout(xaxis=dict(type='category'))
+        st.plotly_chart(fig_macd, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("⚖️ Strateji 3: Varyans Gerilimi ve Esneklik Denge Sınırı")
+        st.write("Sayıların geçmiş döngü ortalamaları ve standart sapmaları hesaplanır. Gerilim puanı **yüksek (özellikle 2.0 ve üzeri)** olan sayılar, kendi varyans sınırlarını aşırı esnetmişlerdir ve her an patlama yapmaya mecburdurlar.")
+        
+        top_varyans = df_mv.sort_values(by="Varyans_Gerilimi", ascending=False).head(15)
+        fig_var = px.bar(top_varyans, x="Sayı", y="Varyans_Gerilimi", color="Varyans_Gerilimi", color_continuous_scale="Gold", height=320)
+        fig_var.update_layout(xaxis=dict(type='category'))
+        st.plotly_chart(fig_var, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("📋 İki Stratejinin Birleşik Veri Matrisi")
+        st.dataframe(df_mv.sort_values(by="Varyans_Gerilimi", ascending=False), use_container_width=True)
+
+    with tab4:
         st.subheader("⛓️ Koşullu Olasılık Matrisi ve Sayı Tetikleyicileri")
         secilen_sayi = st.selectbox("Analiz Edilecek Kilit Sayıyı Seçin:", list(range(1, 81)), index=22)
         markov_matrisi = cached_markov_zinciri_matrisi(analiz_df)
@@ -159,12 +212,12 @@ else:
         fig_markov.update_layout(xaxis=dict(type='category'))
         st.plotly_chart(fig_markov, use_container_width=True)
 
-    with tab4:
+    # --- 🔮 SEKME 5: ENTEGRE EDİLMİŞ AKILLI KUPON MOTORU ---
+    with tab5:
         st.subheader("🧙‍♂️ İleri Düzey Bağımsız Filtreli Kupon Jeneratörü")
-        st.write("Kaç adet kupon yapmak istediğinizi seçin ve aşağıda açılan kutulardan her bir kuponu ayrı ayrı programlayın.")
+        st.write("Aşağıdaki havuz seçeneklerine yeni eklenen MACD Trend ve Varyans Gerilim süzgeçlerini ekleyerek kuponlarınızı zırhlandırın.")
         
         adet_kupon = st.slider("Kaç Sıra Kupon Üretilsin?", min_value=1, max_value=5, value=3)
-        
         kupon_ayarlari = []
         
         st.markdown("---")
@@ -179,12 +232,14 @@ else:
                         [
                             "🔥 Sıcak Sayılar Havuzu (En Çok Çıkan İlk 30 Sayı)",
                             "❄️ Derin Gecikme Havuzu (En Uzun Süredir Çıkmayan İlk 30 Sayı)",
+                            "📈 MACD İvme Havuzu (Trendi En Yüksek İlk 30 Sayı) 🚀",
+                            "⚖️ Varyans Gerilim Havuzu (Patlamaya En Yakın İlk 30 Sayı) 💥",
                             "⛓️ Markov Yoğunluklu Karma (Son Çekilişin Tetiklediği En Güçlü Sayılar)",
                             "☯️ Dengeli Tek / Çift Filtresi (Sayıları Yarı Yarıya Oranlar)",
                             "📏 Ardışık Sayı Yasağı (Kuponda Yan Yana Sayıları Engeller)",
                             "🌌 Shannon Kaos Standardı (Sayı Dağılımının İdeal Entropide Olmasını Şart Koşar)"
                         ],
-                        default=["🔥 Sıcak Sayılar Havuzu (En Çok Çıkan İlk 30 Sayı)"],
+                        default=["📈 MACD İvme Havuzu (Trendi En Yüksek İlk 30 Sayı) 🚀"],
                         key=f"filtre_{k}"
                     )
                 kupon_ayarlari.append({"sıra": k, "sayi_adedi": s_adedi, "filtreler": filtreler})
@@ -208,6 +263,12 @@ else:
                     if "❄️ Derin Gecikme Havuzu (En Uzun Süredir Çıkmayan İlk 30 Sayı)" in filtreler:
                         havuz_listeleri.append(df_gecikme.head(30).index.tolist())
                         
+                    if "📈 MACD İvme Havuzu (Trendi En Yüksek İlk 30 Sayı) 🚀" in filtreler:
+                        havuz_listeleri.append(df_mv.sort_values(by="MACD_Skoru", ascending=False)["Sayı"].tolist()[:30])
+                        
+                    if "⚖️ Varyans Gerilim Havuzu (Patlamaya En Yakın İlk 30 Sayı) 💥" in filtreler:
+                        havuz_listeleri.append(df_mv.sort_values(by="Varyans_Gerilimi", ascending=False)["Sayı"].tolist()[:30])
+                        
                     if "⛓️ Markov Yoğunluklu Karma (Son Çekilişin Tetiklediği En Güçlü Sayılar)" in filtreler:
                         son_cekilis_sayilari = df.iloc[0][sayi_kolonlari].values.astype(int)
                         m_matris = cached_markov_zinciri_matrisi(analiz_df)
@@ -225,7 +286,7 @@ else:
                     kupon_bulundu = False
                     deneme_sayaci = 0
                     
-                    while deneme_sayaci < 1000:
+                    while deneme_sayaci < 1200:
                         deneme_sayaci += 1
                         aday_kupon = sorted(np.random.choice(aday_havuz, s_adedi, replace=False).tolist())
                         
@@ -265,6 +326,6 @@ else:
                         
                 st.balloons()
 
-    with tab5:
+    with tab6:
         st.subheader("📋 Sistem Hafızasında Kayıtlı Güncel Çekilişler")
         st.dataframe(analiz_df, use_container_width=True)
