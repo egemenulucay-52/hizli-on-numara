@@ -2,10 +2,8 @@ import time
 import pandas as pd
 import os
 import requests
-from datetime import datetime, timezone, timedelta
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 
 CSV_DOSYASI = "hizli_on_numara.csv"
@@ -39,7 +37,7 @@ def veri_tabanina_kaydet(yeni_eklenen_ler):
 
 
 def motor_1_api():
-    print("🎯 MOTOR 1: Sınırlandırılmış API bağlantısı deneniyor...")
+    print("🎯 MOTOR 1: Doğrudan bulut API bağlantısı deneniyor...")
     API_URL = "https://www.millipiyangoonline.com/api/v1/games/results/hizli-on-numara?size=30"
     
     headers = {
@@ -81,7 +79,7 @@ def motor_1_api():
 
 
 def motor_2_stealth_selenium():
-    print("🚀 MOTOR 2: Akıllı İنسان Tipi Satır Tarayıcı Başlatılıyor...")
+    print("🚀 MOTOR 2: Tarayıcı Tabanlı Doğrudan API Enjeksiyonu Başlatılıyor...")
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new") 
     options.add_argument("--no-sandbox")
@@ -98,93 +96,66 @@ def motor_2_stealth_selenium():
     })
     
     try:
+        # Önce sayfaya gidip Cloudflare duvarını tarayıcı kimliğiyle tamamen eritiyoruz
         driver.get("https://www.millipiyangoonline.com/hizli-on-numara/sonuclar")
-        time.sleep(12)
+        print("⏳ Sitenin çerez oturumlarının oturması bekleniyor (15 Saniye)...")
+        time.sleep(15)
         
-        # --- 🕒 DİNAMİK SAAT SLOTU HEDEFLEME ---
-        tr_saati = datetime.now(timezone.utc) + timedelta(hours=3)
-        current_hour = tr_saati.hour
-        next_hour = (current_hour + 1) % 24
-        slot_hedef = f"{current_hour:02d}:00–{next_hour:02d}:00"
+        driver.set_script_timeout(20)
         
-        print(f"⏳ Canlı verilere ulaşmak için [{slot_hedef}] tam zamanlı buton aranıyor...")
+        # --- 💥 GİZLİ ENJEKSİYON KOMUTU ---
+        # Tarayıcının içinden, hazır oturum kimlikleriyle arka kapı veri damarını vuruyoruz (Son 100 Çekiliş birden)
+        script = """
+        var callback = arguments[arguments.length - 1];
+        fetch("https://www.millipiyangoonline.com/api/v1/games/results/hizli-on-numara?size=100")
+            .then(response => response.json())
+            .then(data => callback({success: true, json: data}))
+            .catch(err => callback({success: false, error: err.toString()}));
+        """
         
-        # Saati seçtiriyoruz (Hata düzeltildi: By.XPATH yapıldı)
-        try:
-            elementler = driver.find_elements(By.XPATH, "//*[contains(text(), '–')]")
-            for el in elementler:
-                if slot_hedef in el.text.strip():
-                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", el)
-                    time.sleep(1)
-                    driver.execute_script("arguments[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));", el)
-                    print(f"🎯 Saat Dilimi Başarıyla Seçildi: {el.text}")
-                    break
-        except Exception as e:
-            print(f"⚠️ Saat dilimi seçilemedi: {e}")
+        print("⚡ Güvenli tarayıcı tüneli üzerinden canlı makro veri talep ediliyor...")
+        sonuc = driver.execute_async_script(script)
+        
+        if not sonuc or not sonuc.get("success"):
+            raise Exception(f"Tarayıcı içi veri enjeksiyonu başarısız: {sonuc.get('error') if sonuc else 'Bilinmeyen hata'}")
             
-        time.sleep(2)
-        
-        # --- 💥 FİLTRELE BUTONUNU TETİKLEME ---
-        print("⏳ Seçimi onaylamak için [FİLTRELE] butonu ateşleniyor...")
-        try:
-            filtrele_butonlari = driver.find_elements(By.XPATH, "//*[contains(text(), 'FİLTRELE') or contains(text(), 'Filtrele')]")
-            for f_btn in filtrele_butonlari:
-                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", f_btn)
-                time.sleep(1)
-                driver.execute_script("arguments[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));", f_btn)
-                print("🎯 FİLTRELE Butonu Başarıyla Tetiklendi! Verilerin akması bekleniyor (12 Saniye)...")
-                time.sleep(12)
-                break
-        except Exception as e:
-            print(f"⚠️ Filtrele butonuna basılamadı: {e}")
+        data = sonuc.get("json")
+        cekilisler = []
+        if isinstance(data, dict):
+            cekilisler = data.get("data") or data.get("results") or data.get("draws") or []
+        elif isinstance(data, list):
+            cekilisler = data
             
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight/3);")
-        time.sleep(3)
-        
-        body_text = driver.find_element(By.TAG_NAME, "body").text
-        lines = [line.strip() for line in body_text.split('\n') if line.strip()]
+        print(f"🔮 Tarayıcı tünelinden {len(cekilisler)} adet ham çekiliş verisi başarıyla süzüldü!")
         
         mevcut_cekilisler = mevcut_cekilisleri_oku()
         yeni_eklenen_ler = []
         
-        i = 0
-        while i < len(lines):
-            if "çekiliş no" in lines[i].lower():
-                if i + 1 < len(lines):
-                    c_no = lines[i+1]
-                    
-                    if c_no.isdigit():
-                        print(f"🔍 Tarayıcıda Şu An Görünen Çekiliş No: {c_no}")
-                        
-                        if c_no not in mevcut_cekilisler:
-                            gecici_sayilar = []
-                            j = i + 2
-                            
-                            if j < len(lines) and ("." in lines[j] or ":" in lines[j] or "-" in lines[j]):
-                                j += 1
-                            
-                            while j < len(lines) and "detaylar" not in lines[j].lower() and "çekiliş no" not in lines[j].lower():
-                                if lines[j].isdigit():
-                                    val = int(lines[j])
-                                    if 1 <= val <= 80 and val not in gecici_sayilar:
-                                        gecici_sayilar.append(val)
-                                j += 1
-                            
-                            if len(gecici_sayilar) == 20:
-                                gecici_sayilar.sort()
-                                satir_verisi = {"Tarih": time.strftime('%Y-%m-%d %H:%M:%S'), "CekilisNo": c_no}
-                                for idx, s in enumerate(gecici_sayilar, start=1):
-                                    satir_verisi[f"Sayi_{idx}"] = s
-                                yeni_eklenen_ler.append(satir_verisi)
-                                print(f"✨ Canlı Metinden Çekiliş Başarıyla Kazındı: {c_no}")
-                            
-                            i = j - 1
-            i += 1
-        
+        for c in cekilisler:
+            try:
+                c_no = str(c.get("drawId") or c.get("id") or c.get("cekilisNo") or "")
+                if not c_no: continue
+                
+                print(f"🔍 Tünelden Gelen Çekiliş No: {c_no}")
+                if c_no in mevcut_cekilisler: continue
+                
+                toplar = c.get("numbers") or c.get("result") or c.get("kazananSayilar")
+                if not toplar or not isinstance(toplar, list): continue
+                
+                gecici_sayilar = [int(n) for n in toplar if str(n).isdigit() and 1 <= int(n) <= 80]
+                if len(gecici_sayilar) == 20:
+                    gecici_sayilar.sort()
+                    satir_verisi = {"Tarih": time.strftime('%Y-%m-%d %H:%M:%S'), "CekilisNo": c_no}
+                    for i, s in enumerate(gecici_sayilar, start=1):
+                        satir_verisi[f"Sayi_{i}"] = s
+                    yeni_eklenen_ler.append(satir_verisi)
+                    print(f"✨ Enjeksiyon Moduyla Çekiliş Yakalandı: {c_no}")
+            except: continue
+            
         veri_tabanina_kaydet(yeni_eklenen_ler)
         driver.quit()
     except Exception as e:
-        print(f"❌ Motor 2 Hatası: {e}")
+        print(f"❌ Motor 2 Kritik Hatası: {e}")
         driver.quit()
 
 
@@ -192,7 +163,7 @@ def canli_cekilis_takip_et():
     try:
         motor_1_api()
     except Exception as api_hatasi:
-        print(f"⚠️ Motor 1 (API) pas geçildi, hibrit moda aktarılıyor...")
+        print(f"⚠️ Motor 1 (Bulut API) pas geçildi, hibrit enjeksiyon modu aktarılıyor...")
         try:
             motor_2_stealth_selenium()
         except Exception as sel_hatasi:
