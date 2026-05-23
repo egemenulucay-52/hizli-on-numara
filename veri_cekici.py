@@ -2,7 +2,7 @@ import time
 import pandas as pd
 import os
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -101,25 +101,27 @@ def motor_2_stealth_selenium():
         driver.get("https://www.millipiyangoonline.com/hizli-on-numara/sonuclar")
         time.sleep(12)
         
-        # --- 🕒 OTOMATİK TÜRKİYE SAATİ DİLİMİ SEÇİCİ ---
-        # GitHub sunucusu UTC çalıştığı için Türkiye saatini (UTC+3) zorla hesaplıyoruz
-        tr_saati = datetime.utcnow() + timedelta(hours=3)
+        # --- 🕒 NET SLOT HEDEFLEME MOTORU ---
+        # Deprecated hatasını sıfırlayan yeni nesil UTC+3 zaman hesaplaması
+        tr_saati = datetime.now(timezone.utc) + timedelta(hours=3)
         current_hour = tr_saati.hour
-        slot_hedef = f"{current_hour:02d}:00"
+        next_hour = (current_hour + 1) % 24
         
-        print(f"⏳ Canlı verilere ulaşmak için {slot_hedef} saat dilimi düğmesi aranıyor...")
+        # Sitedeki buton formatını birebir taklit ediyoruz (Örn: "13:00–14:00")
+        slot_hedef = f"{current_hour:02d}:00–{next_hour:02d}:00"
+        
+        print(f"⏳ Canlı verilere ulaşmak için [{slot_hedef}] tam zamanlı buton aranıyor...")
         try:
-            elementler = driver.find_elements(By.XPATH, "//*[contains(text(), ':00')]")
+            elementler = driver.find_elements(By.XPATH, "//*[contains(text(), '–')]")
             for el in elementler:
-                if slot_hedef in el.text:
+                if slot_hedef in el.text.strip():
                     driver.execute_script("arguments[0].click();", el)
-                    time.sleep(5)
-                    print(f"🎯 Canlı Zaman Kilidi Kırıldı! Şu anki saat dilimi seçildi: {el.text}")
+                    time.sleep(6)
+                    print(f"🎯 Canlı Zaman Kilidi Kırıldı! Doğru saat dilimi tıklandı: {el.text}")
                     break
         except Exception as e:
-            print(f"⚠️ Saat dilimi seçme düğmesine basılamadı, varsayılan sayfa taranıyor: {e}")
+            print(f"⚠️ Saat dilimi seçme düğmesine basılamadı: {e}")
             
-        # Sayfayı hafifçe kaydırıp verileri tazeleyelim
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight/3);")
         time.sleep(3)
         
