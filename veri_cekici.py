@@ -101,40 +101,42 @@ def motor_2_stealth_selenium():
         driver.get("https://www.millipiyangoonline.com/hizli-on-numara/sonuclar")
         time.sleep(12)
         
-        # --- 🕒 NET SLOT HEDEFLEME MOTORU ---
+        # --- 🕒 DİNAMİK SAAT SLOTU HEDEFLEME ---
         tr_saati = datetime.now(timezone.utc) + timedelta(hours=3)
         current_hour = tr_saati.hour
         next_hour = (current_hour + 1) % 24
         slot_hedef = f"{current_hour:02d}:00–{next_hour:02d}:00"
         
         print(f"⏳ Canlı verilere ulaşmak için [{slot_hedef}] tam zamanlı buton aranıyor...")
+        
+        # Saati seçtiriyoruz
         try:
-            elementler = driver.find_elements(By.XPATH, "//*[contains(text(), '–')]")
+            elementler = driver.find_elements(By.開XPATH, "//*[contains(text(), '–')]")
             for el in elementler:
                 if slot_hedef in el.text.strip():
-                    # Butonu tam merkeze kaydırıyoruz
                     driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", el)
                     time.sleep(1)
-                    
-                    # --- 💥 GERÇEKÇİ MOUSE EVENT DISPATCH (React/Vue Kırıcı) ---
-                    # Sitenin JavaScript motorunu tetikleyen zincirleme gerçek tıklama sinyali
-                    driver.execute_script("""
-                        var ev = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
-                        arguments[0].dispatchEvent(ev);
-                    """, el)
-                    
-                    # Garanti olsun diye aynı sinyali bir üst kapsayıcı kutuya da gönderiyoruz
-                    try:
-                        parent = el.find_element(By.XPATH, "..")
-                        driver.execute_script("arguments[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));", parent)
-                    except: pass
-                    
-                    print(f"🎯 Canlı Zaman Kilidi Kırıldı! Doğru saat dilimi tetiklendi: {el.text}")
-                    print("⏳ Yeni verilerin yüklenmesi için sabırla bekleniyor (12 Saniye)...")
-                    time.sleep(12) # AJAX veri akışının tamamlanması için süreyi uzattık
+                    driver.execute_script("arguments[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));", el)
+                    print(f"🎯 Saat Dilimi Seçildi: {el.text}")
                     break
         except Exception as e:
-            print(f"⚠️ Saat dilimi seçme düğmesine basılamadı: {e}")
+            print(f"⚠️ Saat dilimi seçilemedi: {e}")
+            
+        time.sleep(2)
+        
+        # --- 💥 KRİTİK HAMLE: FİLTRELE BUTONUNU TETİKLEME ---
+        print("⏳ Seçimi onaylamak için [FİLTRELE] butonu ateşleniyor...")
+        try:
+            filtrele_butonlari = driver.find_elements(By.XPATH, "//*[contains(text(), 'FİLTRELE') or contains(text(), 'Filtrele')]")
+            for f_btn in filtrele_butonlari:
+                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", f_btn)
+                time.sleep(1)
+                driver.execute_script("arguments[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));", f_btn)
+                print("🎯 FİLTRELE Butonu Başarıyla Tetiklendi! Verilerin akması bekleniyor (12 Saniye)...")
+                time.sleep(12) # Sayfanın yenilenmesi için tam süre tanıyoruz
+                break
+        except Exception as e:
+            print(f"⚠️ Filtrele butonuna basılamadı: {e}")
             
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight/3);")
         time.sleep(3)
