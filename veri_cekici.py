@@ -112,15 +112,26 @@ def motor_2_stealth_selenium():
             elementler = driver.find_elements(By.XPATH, "//*[contains(text(), '–')]")
             for el in elementler:
                 if slot_hedef in el.text.strip():
-                    # Hem elemente hem de bir üst kapsayıcısına tıklayarak UI tetiklemesini garanti altına alıyoruz
-                    driver.execute_script("arguments[0].click();", el)
+                    # Butonu tam merkeze kaydırıyoruz
+                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", el)
+                    time.sleep(1)
+                    
+                    # --- 💥 GERÇEKÇİ MOUSE EVENT DISPATCH (React/Vue Kırıcı) ---
+                    # Sitenin JavaScript motorunu tetikleyen zincirleme gerçek tıklama sinyali
+                    driver.execute_script("""
+                        var ev = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+                        arguments[0].dispatchEvent(ev);
+                    """, el)
+                    
+                    # Garanti olsun diye aynı sinyali bir üst kapsayıcı kutuya da gönderiyoruz
                     try:
                         parent = el.find_element(By.XPATH, "..")
-                        driver.execute_script("arguments[0].click();", parent)
+                        driver.execute_script("arguments[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));", parent)
                     except: pass
                     
-                    time.sleep(8)  # AJAX verilerinin gelmesi için süreyi hafifçe artırdık
                     print(f"🎯 Canlı Zaman Kilidi Kırıldı! Doğru saat dilimi tetiklendi: {el.text}")
+                    print("⏳ Yeni verilerin yüklenmesi için sabırla bekleniyor (12 Saniye)...")
+                    time.sleep(12) # AJAX veri akışının tamamlanması için süreyi uzattık
                     break
         except Exception as e:
             print(f"⚠️ Saat dilimi seçme düğmesine basılamadı: {e}")
@@ -141,7 +152,6 @@ def motor_2_stealth_selenium():
                     c_no = lines[i+1]
                     
                     if c_no.isdigit():
-                        # DEDEKTİF LOGU: Sayfada anlık olarak ne göründüğünü buraya basıyoruz
                         print(f"🔍 Tarayıcıda Şu An Görünen Çekiliş No: {c_no}")
                         
                         if c_no not in mevcut_cekilisler:
