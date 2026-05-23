@@ -2,7 +2,6 @@ import time
 import pandas as pd
 import os
 import requests
-from datetime import datetime, timezone, timedelta
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -81,7 +80,7 @@ def motor_1_api():
 
 
 def motor_2_stealth_selenium():
-    print("🚀 MOTOR 2: Akıllı İnsan Tipi Satır Tarayıcı Başlatılıyor...")
+    print("🚀 MOTOR 2: Zaman Bükücü Otomatik Canlı Tarayıcı Başlatılıyor...")
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new") 
     options.add_argument("--no-sandbox")
@@ -93,65 +92,22 @@ def motor_2_stealth_selenium():
     options.add_experimental_option('useAutomationExtension', False)
     
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    
+    # --- 🌍 KRİTİK ADIM: SUNUCUYU İSTANBUL SAATİNE ZORLAMA ---
+    # Tarayıcıyı siteye girmeden önce resmi olarak Türkiye saat dilimine kilitliyoruz.
+    driver.execute_cdp_cmd("Emulation.setTimezoneOverride", {"timezoneId": "Europe/Istanbul"})
+    
     driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
         "source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
     })
     
     try:
+        # Sayfayı açıyoruz, artık site bizi doğrudan canlı Türkiye saatinde karşılayacak!
         driver.get("https://www.millipiyangoonline.com/hizli-on-numara/sonuclar")
-        time.sleep(12)
+        print("⏳ Canlı verilerin yüklenmesi bekleniyor (15 Saniye)...")
+        time.sleep(15)
         
-        # --- 🕒 DİNAMİK CANLI SAAT SLOTU HEDEFLEME ---
-        tr_saati = datetime.now(timezone.utc) + timedelta(hours=3)
-        current_hour = tr_saati.hour
-        next_hour = (current_hour + 1) % 24
-        slot_hedef = f"{current_hour:02d}:00–{next_hour:02d}:00"
-        
-        print(f"⏳ Canlı verilere ulaşmak için [{slot_hedef}] saat dilimi aranıyor...")
-        
-        # Sadece EKRANDA GÖRÜNEN gerçek saat butonuna tıklatıyoruz
-        slot_bulundu = False
-        elementler = driver.find_elements(By.XPATH, "//*[contains(text(), '–')]")
-        for el in elementler:
-            try:
-                txt = el.text.strip()
-                if slot_hedef in txt and el.is_displayed():
-                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", el)
-                    time.sleep(1)
-                    driver.execute_script("arguments[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));", el)
-                    print(f"🎯 Canlı Saat Dilimi Başarıyla Seçildi: {txt}")
-                    slot_bulundu = True
-                    break
-            except: continue
-            
-        if not slot_bulundu:
-            print("⚠️ Tam saat eşleşmesi görünür elemanlarda bulunamadı, son aktif slot deneniyor...")
-            for el in reversed(elementler):
-                try:
-                    if '–' in el.text and el.is_displayed():
-                        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", el)
-                        time.sleep(1)
-                        driver.execute_script("arguments[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));", el)
-                        print(f"🔄 Yedek Plan: Görünür durumdaki son slot tetiklendi: {el.text}")
-                        break
-                except: continue
-                
-        time.sleep(2)
-        
-        # --- 💥 GÖRÜNÜR FİLTRELE BUTONUNU TETİKLEME ---
-        print("⏳ Seçimi onaylamak için ekrandaki aktif [FİLTRELE] butonu aranıyor...")
-        filtrele_butonlari = driver.find_elements(By.XPATH, "//*[contains(text(), 'FİLTRELE') or contains(text(), 'Filtrele')]")
-        for f_btn in filtrele_butonlari:
-            try:
-                if f_btn.is_displayed():
-                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", f_btn)
-                    time.sleep(1)
-                    driver.execute_script("arguments[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));", f_btn)
-                    print("🎯 Aktif FİLTRELE Butonu Başarıyla Tetiklendi! Canlı verilerin akması bekleniyor (12 Saniye)...")
-                    time.sleep(12)
-                    break
-            except: continue
-            
+        # Sayfayı biraz aşağı kaydırıp içeriği netleştirelim
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight/3);")
         time.sleep(3)
         
@@ -168,7 +124,7 @@ def motor_2_stealth_selenium():
                     c_no = lines[i+1]
                     
                     if c_no.isdigit():
-                        print(f"🔍 Tarayıcıda Şu An Görünen Çekiliş No: {c_no}")
+                        print(f"🔍 Tarayıcı ekranında anlık okunan Çekiliş No: {c_no}")
                         
                         if c_no not in mevcut_cekilisler:
                             gecici_sayilar = []
@@ -182,6 +138,7 @@ def motor_2_stealth_selenium():
                                     val = int(lines[j])
                                     if 1 <= val <= 80 and val not in gecici_sayilar:
                                         gecici_sayilar.append(val)
+                            
                                 j += 1
                             
                             if len(gecici_sayilar) == 20:
