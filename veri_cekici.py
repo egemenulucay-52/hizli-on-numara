@@ -81,7 +81,7 @@ def motor_1_api():
 
 
 def motor_2_stealth_selenium():
-    print("🚀 MOTOR 2: Akıllı İnsan Tipi Satır Tarayıcı Başlatılıyor...")
+    print("🚀 MOTOR 2: Akıllı İنسان Tipi Satır Tarayıcı Başlatılıyor...")
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new") 
     options.add_argument("--no-sandbox")
@@ -109,22 +109,22 @@ def motor_2_stealth_selenium():
         
         print(f"⏳ Canlı verilere ulaşmak için [{slot_hedef}] tam zamanlı buton aranıyor...")
         
-        # Saati seçtiriyoruz
+        # Saati seçtiriyoruz (Hata düzeltildi: By.XPATH yapıldı)
         try:
-            elementler = driver.find_elements(By.開XPATH, "//*[contains(text(), '–')]")
+            elementler = driver.find_elements(By.XPATH, "//*[contains(text(), '–')]")
             for el in elementler:
                 if slot_hedef in el.text.strip():
                     driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", el)
                     time.sleep(1)
                     driver.execute_script("arguments[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));", el)
-                    print(f"🎯 Saat Dilimi Seçildi: {el.text}")
+                    print(f"🎯 Saat Dilimi Başarıyla Seçildi: {el.text}")
                     break
         except Exception as e:
             print(f"⚠️ Saat dilimi seçilemedi: {e}")
             
         time.sleep(2)
         
-        # --- 💥 KRİTİK HAMLE: FİLTRELE BUTONUNU TETİKLEME ---
+        # --- 💥 FİLTRELE BUTONUNU TETİKLEME ---
         print("⏳ Seçimi onaylamak için [FİLTRELE] butonu ateşleniyor...")
         try:
             filtrele_butonlari = driver.find_elements(By.XPATH, "//*[contains(text(), 'FİLTRELE') or contains(text(), 'Filtrele')]")
@@ -133,7 +133,7 @@ def motor_2_stealth_selenium():
                 time.sleep(1)
                 driver.execute_script("arguments[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));", f_btn)
                 print("🎯 FİLTRELE Butonu Başarıyla Tetiklendi! Verilerin akması bekleniyor (12 Saniye)...")
-                time.sleep(12) # Sayfanın yenilenmesi için tam süre tanıyoruz
+                time.sleep(12)
                 break
         except Exception as e:
             print(f"⚠️ Filtrele butonuna basılamadı: {e}")
