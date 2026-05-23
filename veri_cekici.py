@@ -1,7 +1,6 @@
 import time
 import pandas as pd
 import os
-import re
 import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -49,7 +48,7 @@ def motor_1_api():
         "Referer": "https://www.millipiyangoonline.com/hizli-on-numara/sonuclar"
     }
     
-    response = requests.get(API_URL, headers=headers, timeout=12)
+    response = requests.get(API_URL, headers=headers, timeout=10)
     if response.status_code != 200:
         raise Exception(f"Sunucu durum kodu: {response.status_code}")
         
@@ -81,7 +80,7 @@ def motor_1_api():
 
 
 def motor_2_stealth_selenium():
-    print("🚀 MOTOR 2: Akıllı Görsel Saf Metin Tarayıcı Başlatılıyor...")
+    print("🚀 MOTOR 2: Akıllı İnsan Tipi Satır Tarayıcı Başlatılıyor...")
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new") 
     options.add_argument("--no-sandbox")
@@ -93,7 +92,6 @@ def motor_2_stealth_selenium():
     options.add_experimental_option('useAutomationExtension', False)
     
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-    
     driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
         "source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
     })
@@ -102,45 +100,50 @@ def motor_2_stealth_selenium():
         driver.get("https://www.millipiyangoonline.com/hizli-on-numara/sonuclar")
         time.sleep(12)
         
-        # Sayfayı kaydırıp içeriğin tam yüklenmesini sağlıyoruz
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight/3);")
+        # Sayfayı kaydırıp tüm verilerin ekrana dökülmesini sağlıyoruz
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
         time.sleep(3)
         
-        # Sayfadaki tüm ham yazıyı tek parça halinde çekiyoruz
         body_text = driver.find_element(By.TAG_NAME, "body").text
-        
-        print("\n--- 📄 CANLI SAYFA METNİ ÖRNEĞİ (İLK 1000 KARAKTER) ---")
-        print(body_text[:1000])
-        print("-----------------------------------------------------\n")
+        lines = [line.strip() for line in body_text.split('\n') if line.strip()]
         
         mevcut_cekilisler = mevcut_cekilisleri_oku()
         yeni_eklenen_ler = []
         
-        # Metni 2026 ile başlayan çekiliş numaralarına göre dilimliyoruz
-        segments = re.split(r'\b(2026\d{7,12})\b', body_text)
-        
-        if len(segments) > 1:
-            print(f"🔮 Sayfa metninde {len(segments)//2} adet potansiyel çekiliş bloku izole edildi.")
-            for i in range(1, len(segments), 2):
-                c_no = segments[i]
-                post_text = segments[i+1] # Çekiliş numarasından sonra gelen metin alanı (tarih ve toplar)
-                
-                if c_no in mevcut_cekilisler: continue
-                
-                # Metin bloğu içindeki tüm 1-2 basamaklı şanslı sayı adaylarını topluyoruz
-                aday_sayilar = [int(n) for n in re.findall(r'\b\d{1,2}\b', post_text) if 1 <= int(n) <= 80]
-                
-                # Eğer blokta en az 20 sayı varsa, tarih verilerinden sıyrılmak için en sondaki 20 sayıyı (topları) alıyoruz
-                if len(aday_sayilar) >= 20:
-                    sansli_toplar = aday_sayilar[-20:]
-                    sansli_toplar.sort()
+        i = 0
+        while i < len(lines):
+            # "Çekiliş no:" ibaresini yakala
+            if "çekiliş no" in lines[i].lower():
+                if i + 1 < len(lines):
+                    c_no = lines[i+1] # Bir sonraki satır kesinlikle çekiliş numarasıdır (Örn: 30863)
                     
-                    satir_verisi = {"Tarih": time.strftime('%Y-%m-%d %H:%M:%S'), "CekilisNo": c_no}
-                    for idx, s in enumerate(sansli_toplar, start=1):
-                        satir_verisi[f"Sayi_{idx}"] = s
+                    if c_no.isdigit() and c_no not in mevcut_cekilisler:
+                        gecici_sayilar = []
+                        j = i + 2
                         
-                    yeni_eklenen_ler.append(satir_verisi)
-                    print(f"✨ Saf Metin Analiziyle Çekiliş Kilidi Kırıldı: {c_no}")
+                        # Tarih/Saat satırını atla (Örn: 23.05.2026-06:57)
+                        if j < len(lines) and ("." in lines[j] or ":" in lines[j] or "-" in lines[j]):
+                            j += 1
+                        
+                        # "DETAYLAR" veya yeni bir çekiliş başlayana kadar altındaki tüm sayıları topla
+                        while j < len(lines) and "detaylar" not in lines[j].lower() and "çekiliş no" not in lines[j].lower():
+                            if lines[j].isdigit():
+                                val = int(lines[j])
+                                if 1 <= val <= 80 and val not in gecici_sayilar:
+                                    gecici_sayilar.append(val)
+                            j += 1
+                        
+                        # Eğer bloktan tam 20 tane sayı çıktıysa listeye ekle
+                        if len(gecici_sayilar) == 20:
+                            gecici_sayilar.sort()
+                            satir_verisi = {"Tarih": time.strftime('%Y-%m-%d %H:%M:%S'), "CekilisNo": c_no}
+                            for idx, s in enumerate(gecici_sayilar, start=1):
+                                satir_verisi[f"Sayi_{idx}"] = s
+                            yeni_eklenen_ler.append(satir_verisi)
+                            print(f"✨ Canlı Metinden Çekiliş Başarıyla Kazındı: {c_no}")
+                        
+                        i = j - 1
+            i += 1
         
         veri_tabanina_kaydet(yeni_eklenen_ler)
         driver.quit()
