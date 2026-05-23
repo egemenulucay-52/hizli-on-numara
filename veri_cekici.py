@@ -102,12 +102,9 @@ def motor_2_stealth_selenium():
         time.sleep(12)
         
         # --- 🕒 NET SLOT HEDEFLEME MOTORU ---
-        # Deprecated hatasını sıfırlayan yeni nesil UTC+3 zaman hesaplaması
         tr_saati = datetime.now(timezone.utc) + timedelta(hours=3)
         current_hour = tr_saati.hour
         next_hour = (current_hour + 1) % 24
-        
-        # Sitedeki buton formatını birebir taklit ediyoruz (Örn: "13:00–14:00")
         slot_hedef = f"{current_hour:02d}:00–{next_hour:02d}:00"
         
         print(f"⏳ Canlı verilere ulaşmak için [{slot_hedef}] tam zamanlı buton aranıyor...")
@@ -115,9 +112,15 @@ def motor_2_stealth_selenium():
             elementler = driver.find_elements(By.XPATH, "//*[contains(text(), '–')]")
             for el in elementler:
                 if slot_hedef in el.text.strip():
+                    # Hem elemente hem de bir üst kapsayıcısına tıklayarak UI tetiklemesini garanti altına alıyoruz
                     driver.execute_script("arguments[0].click();", el)
-                    time.sleep(6)
-                    print(f"🎯 Canlı Zaman Kilidi Kırıldı! Doğru saat dilimi tıklandı: {el.text}")
+                    try:
+                        parent = el.find_element(By.XPATH, "..")
+                        driver.execute_script("arguments[0].click();", parent)
+                    except: pass
+                    
+                    time.sleep(8)  # AJAX verilerinin gelmesi için süreyi hafifçe artırdık
+                    print(f"🎯 Canlı Zaman Kilidi Kırıldı! Doğru saat dilimi tetiklendi: {el.text}")
                     break
         except Exception as e:
             print(f"⚠️ Saat dilimi seçme düğmesine basılamadı: {e}")
@@ -137,29 +140,33 @@ def motor_2_stealth_selenium():
                 if i + 1 < len(lines):
                     c_no = lines[i+1]
                     
-                    if c_no.isdigit() and c_no not in mevcut_cekilisler:
-                        gecici_sayilar = []
-                        j = i + 2
+                    if c_no.isdigit():
+                        # DEDEKTİF LOGU: Sayfada anlık olarak ne göründüğünü buraya basıyoruz
+                        print(f"🔍 Tarayıcıda Şu An Görünen Çekiliş No: {c_no}")
                         
-                        if j < len(lines) and ("." in lines[j] or ":" in lines[j] or "-" in lines[j]):
-                            j += 1
-                        
-                        while j < len(lines) and "detaylar" not in lines[j].lower() and "çekiliş no" not in lines[j].lower():
-                            if lines[j].isdigit():
-                                val = int(lines[j])
-                                if 1 <= val <= 80 and val not in gecici_sayilar:
-                                    gecici_sayilar.append(val)
-                            j += 1
-                        
-                        if len(gecici_sayilar) == 20:
-                            gecici_sayilar.sort()
-                            satir_verisi = {"Tarih": time.strftime('%Y-%m-%d %H:%M:%S'), "CekilisNo": c_no}
-                            for idx, s in enumerate(gecici_sayilar, start=1):
-                                satir_verisi[f"Sayi_{idx}"] = s
-                            yeni_eklenen_ler.append(satir_verisi)
-                            print(f"✨ Canlı Metinden Çekiliş Başarıyla Kazındı: {c_no}")
-                        
-                        i = j - 1
+                        if c_no not in mevcut_cekilisler:
+                            gecici_sayilar = []
+                            j = i + 2
+                            
+                            if j < len(lines) and ("." in lines[j] or ":" in lines[j] or "-" in lines[j]):
+                                j += 1
+                            
+                            while j < len(lines) and "detaylar" not in lines[j].lower() and "çekiliş no" not in lines[j].lower():
+                                if lines[j].isdigit():
+                                    val = int(lines[j])
+                                    if 1 <= val <= 80 and val not in gecici_sayilar:
+                                        gecici_sayilar.append(val)
+                                j += 1
+                            
+                            if len(gecici_sayilar) == 20:
+                                gecici_sayilar.sort()
+                                satir_verisi = {"Tarih": time.strftime('%Y-%m-%d %H:%M:%S'), "CekilisNo": c_no}
+                                for idx, s in enumerate(gecici_sayilar, start=1):
+                                    satir_verisi[f"Sayi_{idx}"] = s
+                                yeni_eklenen_ler.append(satir_verisi)
+                                print(f"✨ Canlı Metinden Çekiliş Başarıyla Kazındı: {c_no}")
+                            
+                            i = j - 1
             i += 1
         
         veri_tabanina_kaydet(yeni_eklenen_ler)
