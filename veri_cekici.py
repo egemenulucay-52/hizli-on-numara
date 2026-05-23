@@ -2,6 +2,7 @@ import time
 import pandas as pd
 import os
 import requests
+from datetime import datetime, timezone, timedelta
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -42,7 +43,7 @@ def motor_1_api():
     API_URL = "https://www.millipiyangoonline.com/api/v1/games/results/hizli-on-numara?size=30"
     
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept": "application/json, text/plain, */*",
         "Origin": "https://www.millipiyangoonline.com",
         "Referer": "https://www.millipiyangoonline.com/hizli-on-numara/sonuclar"
@@ -80,21 +81,18 @@ def motor_1_api():
 
 
 def motor_2_stealth_selenium():
-    print("🚀 MOTOR 2: Zaman Bükücü Otomatik Canlı Tarayıcı Başlatılıyor...")
+    print("🚀 MOTOR 2: Çift Dikiş Süpürme Motoru Başlatılıyor...")
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new") 
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--window-size=1200,1600")
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, Gecko) Chrome/124.0.0.0 Safari/537.36")
     
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
     
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-    
-    # --- 🌍 KRİTİK ADIM: SUNUCUYU İSTANBUL SAATİNE ZORLAMA ---
-    # Tarayıcıyı siteye girmeden önce resmi olarak Türkiye saat dilimine kilitliyoruz.
     driver.execute_cdp_cmd("Emulation.setTimezoneOverride", {"timezoneId": "Europe/Istanbul"})
     
     driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
@@ -102,55 +100,99 @@ def motor_2_stealth_selenium():
     })
     
     try:
-        # Sayfayı açıyoruz, artık site bizi doğrudan canlı Türkiye saatinde karşılayacak!
         driver.get("https://www.millipiyangoonline.com/hizli-on-numara/sonuclar")
-        print("⏳ Canlı verilerin yüklenmesi bekleniyor (15 Saniye)...")
-        time.sleep(15)
+        time.sleep(12)
         
-        # Sayfayı biraz aşağı kaydırıp içeriği netleştirelim
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight/3);")
-        time.sleep(3)
+        # --- 🕒 ARALIK HESAPLAMA (Geçmiş ve Canlı Slot Ayarı) ---
+        tr_saati = datetime.now(timezone.utc) + timedelta(hours=3)
+        current_hour = tr_saati.hour
         
-        body_text = driver.find_element(By.TAG_NAME, "body").text
-        lines = [line.strip() for line in body_text.split('\n') if line.strip()]
+        # 1. Şu anki canlı slot (Örn: 15:00-16:00)
+        curr_slot = f"{current_hour:02d}:00–{(current_hour + 1) % 24:02d}:00"
+        # 2. Bir önceki kaçan slot (Örn: 14:00-15:00)
+        prev_slot = f"{(current_hour - 1) % 24:02d}:00–{current_hour:02d}:00"
         
-        mevcut_cekilisler = mevcut_cekilisleri_oku()
+        # Sızıntıları önlemek için önce geçmiş saati süpürüp sonra canlı saate geçiyoruz
+        hedef_slotlar = [prev_slot, curr_slot]
         yeni_eklenen_ler = []
+        mevcut_cekilisler = mevcut_cekilisleri_oku()
         
-        i = 0
-        while i < len(lines):
-            if "çekiliş no" in lines[i].lower():
-                if i + 1 < len(lines):
-                    c_no = lines[i+1]
-                    
-                    if c_no.isdigit():
-                        print(f"🔍 Tarayıcı ekranında anlık okunan Çekiliş No: {c_no}")
+        for slot_hedef in hedef_slotlar:
+            print(f"⏳ [{slot_hedef}] zaman dilimi taranıyor...")
+            slot_bulundu = False
+            elementler = driver.find_elements(By.XPATH, "//*[contains(text(), '–')]")
+            
+            for el in elementler:
+                try:
+                    txt = el.text.strip()
+                    if slot_hedef in txt and el.is_displayed():
+                        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", el)
+                        time.sleep(1)
+                        driver.execute_script("arguments[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));", el)
+                        print(f"🎯 Slot Seçildi: {txt}")
+                        slot_bulundu = True
+                        break
+                except: continue
+                
+            if not slot_bulundu:
+                print(f"⚠️ [{slot_hedef}] görünür durumda bulunamadı, es geçiliyor.")
+                continue
+                
+            time.sleep(2)
+            
+            # Filtrele butonuna basma hamlesi
+            filtrele_butonlari = driver.find_elements(By.XPATH, "//*[contains(text(), 'FİLTRELE') or contains(text(), 'Filtrele')]")
+            for f_btn in filtrele_butonlari:
+                try:
+                    if f_btn.is_displayed():
+                        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", f_btn)
+                        time.sleep(1)
+                        driver.execute_script("arguments[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));", f_btn)
+                        print("🎯 Filtre uygulandı, veriler çekiliyor...")
+                        time.sleep(10)
+                        break
+                except: continue
+                
+            # Sayfadaki verileri okuma
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight/3);")
+            time.sleep(2)
+            
+            body_text = driver.find_element(By.TAG_NAME, "body").text
+            lines = [line.strip() for line in body_text.split('\n') if line.strip()]
+            
+            i = 0
+            while i < len(lines):
+                if "çekiliş no" in lines[i].lower():
+                    if i + 1 < len(lines):
+                        c_no = lines[i+1]
                         
-                        if c_no not in mevcut_cekilisler:
-                            gecici_sayilar = []
-                            j = i + 2
+                        if c_no.isdigit():
+                            print(f"🔍 Okunan Çekiliş No: {c_no}")
                             
-                            if j < len(lines) and ("." in lines[j] or ":" in lines[j] or "-" in lines[j]):
-                                j += 1
-                            
-                            while j < len(lines) and "detaylar" not in lines[j].lower() and "çekiliş no" not in lines[j].lower():
-                                if lines[j].isdigit():
-                                    val = int(lines[j])
-                                    if 1 <= val <= 80 and val not in gecici_sayilar:
-                                        gecici_sayilar.append(val)
-                            
-                                j += 1
-                            
-                            if len(gecici_sayilar) == 20:
-                                gecici_sayilar.sort()
-                                satir_verisi = {"Tarih": time.strftime('%Y-%m-%d %H:%M:%S'), "CekilisNo": c_no}
-                                for idx, s in enumerate(gecici_sayilar, start=1):
-                                    satir_verisi[f"Sayi_{idx}"] = s
-                                yeni_eklenen_ler.append(satir_verisi)
-                                print(f"✨ Canlı Metinden Çekiliş Başarıyla Kazındı: {c_no}")
-                            
-                            i = j - 1
-            i += 1
+                            if c_no not in mevcut_cekilisler and not any(d["CekilisNo"] == c_no for d in yeni_eklenen_ler):
+                                gecici_sayilar = []
+                                j = i + 2
+                                
+                                if j < len(lines) and ("." in lines[j] or ":" in lines[j] or "-" in lines[j]):
+                                    j += 1
+                                
+                                while j < len(lines) and "detaylar" not in lines[j].lower() and "çekiliş no" not in lines[j].lower():
+                                    if lines[j].isdigit():
+                                        val = int(lines[j])
+                                        if 1 <= val <= 80 and val not in gecici_sayilar:
+                                            gecici_sayilar.append(val)
+                                    j += 1
+                                
+                                if len(gecici_sayilar) == 20:
+                                    gecici_sayilar.sort()
+                                    satir_verisi = {"Tarih": time.strftime('%Y-%m-%d %H:%M:%S'), "CekilisNo": c_no}
+                                    for idx, s in enumerate(gecici_sayilar, start=1):
+                                        satir_verisi[f"Sayi_{idx}"] = s
+                                    yeni_eklenen_ler.append(satir_verisi)
+                                    print(f"✨ Havuza Taze Çekiliş Eklendi: {c_no}")
+                                
+                                i = j - 1
+                i += 1
         
         veri_tabanina_kaydet(yeni_eklenen_ler)
         driver.quit()
