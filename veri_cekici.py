@@ -2,6 +2,7 @@ import time
 import pandas as pd
 import os
 import requests
+from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -100,8 +101,26 @@ def motor_2_stealth_selenium():
         driver.get("https://www.millipiyangoonline.com/hizli-on-numara/sonuclar")
         time.sleep(12)
         
-        # Sayfayı kaydırıp tüm verilerin ekrana dökülmesini sağlıyoruz
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
+        # --- 🕒 OTOMATİK TÜRKİYE SAATİ DİLİMİ SEÇİCİ ---
+        # GitHub sunucusu UTC çalıştığı için Türkiye saatini (UTC+3) zorla hesaplıyoruz
+        tr_saati = datetime.utcnow() + timedelta(hours=3)
+        current_hour = tr_saati.hour
+        slot_hedef = f"{current_hour:02d}:00"
+        
+        print(f"⏳ Canlı verilere ulaşmak için {slot_hedef} saat dilimi düğmesi aranıyor...")
+        try:
+            elementler = driver.find_elements(By.XPATH, "//*[contains(text(), ':00')]")
+            for el in elementler:
+                if slot_hedef in el.text:
+                    driver.execute_script("arguments[0].click();", el)
+                    time.sleep(5)
+                    print(f"🎯 Canlı Zaman Kilidi Kırıldı! Şu anki saat dilimi seçildi: {el.text}")
+                    break
+        except Exception as e:
+            print(f"⚠️ Saat dilimi seçme düğmesine basılamadı, varsayılan sayfa taranıyor: {e}")
+            
+        # Sayfayı hafifçe kaydırıp verileri tazeleyelim
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight/3);")
         time.sleep(3)
         
         body_text = driver.find_element(By.TAG_NAME, "body").text
@@ -112,20 +131,17 @@ def motor_2_stealth_selenium():
         
         i = 0
         while i < len(lines):
-            # "Çekiliş no:" ibaresini yakala
             if "çekiliş no" in lines[i].lower():
                 if i + 1 < len(lines):
-                    c_no = lines[i+1] # Bir sonraki satır kesinlikle çekiliş numarasıdır (Örn: 30863)
+                    c_no = lines[i+1]
                     
                     if c_no.isdigit() and c_no not in mevcut_cekilisler:
                         gecici_sayilar = []
                         j = i + 2
                         
-                        # Tarih/Saat satırını atla (Örn: 23.05.2026-06:57)
                         if j < len(lines) and ("." in lines[j] or ":" in lines[j] or "-" in lines[j]):
                             j += 1
                         
-                        # "DETAYLAR" veya yeni bir çekiliş başlayana kadar altındaki tüm sayıları topla
                         while j < len(lines) and "detaylar" not in lines[j].lower() and "çekiliş no" not in lines[j].lower():
                             if lines[j].isdigit():
                                 val = int(lines[j])
@@ -133,7 +149,6 @@ def motor_2_stealth_selenium():
                                     gecici_sayilar.append(val)
                             j += 1
                         
-                        # Eğer bloktan tam 20 tane sayı çıktıysa listeye ekle
                         if len(gecici_sayilar) == 20:
                             gecici_sayilar.sort()
                             satir_verisi = {"Tarih": time.strftime('%Y-%m-%d %H:%M:%S'), "CekilisNo": c_no}
