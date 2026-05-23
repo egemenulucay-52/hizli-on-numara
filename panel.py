@@ -8,7 +8,7 @@ import istatistik  # Matematik motorumuz bağlı
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="Hızlı On Numara Kuantum Analiz Terminali", layout="wide")
 
-# --- BULUT BAĞLANTISI ---
+# --- BULUT BAĞLANTISI (RAM dostu önbellek süresi artırıldı) ---
 GITHUB_CSV_URL = "https://raw.githubusercontent.com/egemenulucay-52/hizli-on-numara/main/hizli_on_numara.csv"
 YEREL_CSV = "hizli_on_numara.csv"
 
@@ -48,11 +48,30 @@ else:
     analiz_df = df.head(analiz_adet)
     tum_sayilar = analiz_df[sayi_kolonlari].values.flatten()
     frekanslar = pd.Series(tum_sayilar).value_counts().reindex(range(1, 81), fill_value=0)
-    df_gecikme = istatistik.gecikme_derinligi_analizi(analiz_df, sayi_kolonlari)
+    
+    # --- 💥 Gelişmiş Önbellek Motoru (Ağır Hesaplamaları Hafızaya Alma) ---
+    @st.cache_data(ttl=60)
+    def cached_gecikme_analizi(_df_slice):
+        return istatistik.gecikme_derinligi_analizi(_df_slice, sayi_kolonlari)
+
+    @st.cache_data(ttl=60)
+    def cached_tur_gecis_analizi(_df_slice):
+        return istatistik.tur_gecis_analizi(_df_slice, sayi_kolonlari)
+
+    @st.cache_data(ttl=60)
+    def cached_shannon_entropisi(_df_slice):
+        return istatistik.shannon_entropisi(_df_slice, sayi_kolonlari)
+
+    @st.cache_data(ttl=60)
+    def cached_markov_zinciri_matrisi(_df_slice):
+        return istatistik.markov_zinciri_matrisi(_df_slice, sayi_kolonlari)
+    
+    # Hesaplamaları çağırma
+    df_gecikme = cached_gecikme_analizi(analiz_df)
     
     chi2_stat, p_value = istatistik.ki_kare_testi(analiz_df, sayi_kolonlari)
     if p_value > 0.05:
-        st.success(f"🎲 **Rastlantısallık Denetimi:** Sistem %95 güvenilirlikle tamamen adil ve rastgele çalışıyor. (p-değeri: {p_value:.4f})")
+        st.success(f"🎲 **Rastlantısallık Denetimi:** Sistem %95 güvenilirlikle tamamen adilและrastgele çalışıyor. (p-değeri: {p_value:.4f})")
     else:
         st.warning(f"⚠️ **Rastlantısallık Sapması:** Sayı dağılımlarında teorik sınırın dışında kümelenmeler saptandı! (p-değeri: {p_value:.4f})")
 
@@ -86,15 +105,45 @@ else:
         st.dataframe(top_gecikme, use_container_width=True)
 
     with tab2:
+        # --- 📈 MERKEZİ EĞİLİM VE ORTALAMALAR ANALİZİ (YENİ EKLEME) ---
+        st.subheader("📈 Veri Kümesinin Merkezi Eğilim ve Ortalamalar Analizi")
+        st.write("Sayıların aritmetik ve geometrik merkezkaç kuvveti. Teorik olarak hilesiz bir 1-80 sisteminde dengelenme noktası **40.50**'dir.")
+        
+        # Matematiksel Ortalama Hesaplamaları
+        aritmetik_ort = float(np.mean(tum_sayilar))
+        geometrik_ort = float(np.exp(np.mean(np.log(tum_sayilar))))
+        medyan_deger = float(np.median(tum_sayilar))
+        
+        c_ort1, c_ort2, c_ort3 = st.columns(3)
+        with c_ort1:
+            st.metric(
+                label="🧮 Genel Aritmetik Ortalama", 
+                value=f"{aritmetik_ort:.2f}", 
+                delta=f"{aritmetik_ort - 40.50:+.2f} (Teorik Sapma)",
+                delta_color="normal" if abs(aritmetik_ort - 40.50) < 0.5 else "inverse"
+            )
+        with c_ort2:
+            st.metric(
+                label="📐 Genel Geometrik Ortalama", 
+                value=f"{geometrik_ort:.2f}",
+                help="Geometrik ortalama, ekstrem dalgalanmaları törpüleyerek gerçek çekim merkezini gösterir."
+            )
+        with c_ort3:
+            st.metric(
+                label="⚖️ Olasılık Dengesi (Medyan)", 
+                value=f"{medyan_deger:.1f}"
+            )
+            
+        st.markdown("---")
         st.subheader("📐 Hipergeometrik Tur Geçiş Analizi (Overlap)")
-        seri_gecis = istatistik.tur_gecis_analizi(analiz_df, sayi_kolonlari)
+        seri_gecis = cached_tur_gecis_analizi(analiz_df)
         df_gecis = pd.DataFrame({"Ortak Sayı Adedi": seri_gecis.index, "Görülme Sıklığı": seri_gecis.values})
         fig_gecis = px.bar(df_gecis, x="Ortak Sayı Adedi", y="Görülme Sıklığı", color="Görülme Sıklığı", color_continuous_scale="Purples", height=350)
         st.plotly_chart(fig_gecis, use_container_width=True)
         
         st.markdown("---")
         st.subheader("🌌 Shannon Entropisi ile Çekilişlerin Kaos Dağılımı")
-        seri_entropi = istatistik.shannon_entropisi(analiz_df, sayi_kolonlari)
+        seri_entropi = cached_shannon_entropisi(analiz_df)
         fig_ent = px.histogram(seri_entropi, nbins=15, labels={'value': 'Shannon Entropi Skoru (Kaos Yoğunluğu)'}, color_discrete_sequence=['#0083B0'], height=320)
         fig_ent.update_layout(showlegend=False)
         st.plotly_chart(fig_ent, use_container_width=True)
@@ -102,7 +151,7 @@ else:
     with tab3:
         st.subheader("⛓️ Koşullu Olasılık Matrisi ve Sayı Tetikleyicileri")
         secilen_sayi = st.selectbox("Analiz Edilecek Kilit Sayıyı Seçin:", list(range(1, 81)), index=22)
-        markov_matrisi = istatistik.markov_zinciri_matrisi(analiz_df, sayi_kolonlari)
+        markov_matrisi = cached_markov_zinciri_matrisi(analiz_df)
         olasiliklar = markov_matrisi[secilen_sayi - 1]
         df_markov = pd.DataFrame({"Sonraki Sayı": list(range(1, 81)), "Tetiklenme Olasılığı": olasiliklar})
         top_markov = df_markov.sort_values(by="Tetiklenme Olasılığı", ascending=False).head(7)
@@ -110,14 +159,12 @@ else:
         fig_markov.update_layout(xaxis=dict(type='category'))
         st.plotly_chart(fig_markov, use_container_width=True)
 
-    # --- SEKME 4: HER KUPONA ÖZEL BAĞIMSIZ JENERATÖR ---
     with tab4:
         st.subheader("🧙‍♂️ İleri Düzey Bağımsız Filtreli Kupon Jeneratörü")
         st.write("Kaç adet kupon yapmak istediğinizi seçin ve aşağıda açılan kutulardan her bir kuponu ayrı ayrı programlayın.")
         
         adet_kupon = st.slider("Kaç Sıra Kupon Üretilsin?", min_value=1, max_value=5, value=3)
         
-        # Her bir kuponun ayarlarını depolayacağımız liste
         kupon_ayarlari = []
         
         st.markdown("---")
@@ -131,7 +178,7 @@ else:
                         f"Kupon {k} İçin Uygulanacak Süzgeçler (Çoklu Seçim):",
                         [
                             "🔥 Sıcak Sayılar Havuzu (En Çok Çıkan İlk 30 Sayı)",
-                            "❄️ Derin Gecikme Havuzu (En Long Süredir Çıkmayan İlk 30 Sayı)",
+                            "❄️ Derin Gecikme Havuzu (En Uzun Süredir Çıkmayan İlk 30 Sayı)",
                             "⛓️ Markov Yoğunluklu Karma (Son Çekilişin Tetiklediği En Güçlü Sayılar)",
                             "☯️ Dengeli Tek / Çift Filtresi (Sayıları Yarı Yarıya Oranlar)",
                             "📏 Ardışık Sayı Yasağı (Kuponda Yan Yana Sayıları Engeller)",
@@ -147,25 +194,23 @@ else:
             with st.spinner("🔮 Kuantum süzgeçler her sıra için bağımsız hesaplanıyor..."):
                 st.markdown(f"### 🎫 Süzülmüş Özel Kupon Portföyünüz:")
                 
-                # Her kupon ayarını sırayla işliyoruz
                 for ayar in kupon_ayarlari:
                     k_idx = ayar["sıra"]
                     s_adedi = ayar["sayi_adedi"]
                     filtreler = ayar["filtreler"]
                     
-                    # Dinamik olarak o kupona ait havuzu inşa ediyoruz
                     aday_havuz = list(range(1, 81))
                     havuz_listeleri = []
                     
                     if "🔥 Sıcak Sayılar Havuzu (En Çok Çıkan İlk 30 Sayı)" in filtreler:
                         havuz_listeleri.append(frekanslar.sort_values(ascending=False).index.tolist()[:30])
                         
-                    if "❄️ Derin Gecikme Havuzu (En Long Süredir Çıkmayan İlk 30 Sayı)" in filtreler:
+                    if "❄️ Derin Gecikme Havuzu (En Uzun Süredir Çıkmayan İlk 30 Sayı)" in filtreler:
                         havuz_listeleri.append(df_gecikme.head(30).index.tolist())
                         
                     if "⛓️ Markov Yoğunluklu Karma (Son Çekilişin Tetiklediği En Güçlü Sayılar)" in filtreler:
                         son_cekilis_sayilari = df.iloc[0][sayi_kolonlari].values.astype(int)
-                        m_matris = istatistik.markov_zinciri_matrisi(analiz_df, sayi_kolonlari)
+                        m_matris = cached_markov_zinciri_matrisi(analiz_df)
                         toplam_olasiliklar = np.zeros(80)
                         for num in son_cekilis_sayilari:
                             toplam_olasiliklar += m_matris[num - 1]
@@ -180,7 +225,6 @@ else:
                     kupon_bulundu = False
                     deneme_sayaci = 0
                     
-                    # Tek bir kupon için süzgeç odası
                     while deneme_sayaci < 1000:
                         deneme_sayaci += 1
                         aday_kupon = sorted(np.random.choice(aday_havuz, s_adedi, replace=False).tolist())
@@ -211,7 +255,6 @@ else:
                                 if entropi < (max_ent * 0.75):
                                     continue
                         
-                        # Eğer buraya kadar süzgeçten geçebildiyse kupon onaylanmıştır
                         kupon_html = " ".join([f"<span style='display:inline-block; background-color:#1565C0; color:white; border-radius:50%; width:36px; height:36px; text-align:center; line-height:36px; font-weight:bold; font-size:13px; margin:3px;'>{num}</span>" for num in aday_kupon])
                         st.markdown(f"**Sıra {k_idx} ({s_adedi} Sayı):** {kupon_html}", unsafe_allow_html=True)
                         kupon_bulundu = True
