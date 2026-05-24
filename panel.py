@@ -119,16 +119,18 @@ else:
             for s in stratejiler:
                 tahmin = set(strateji_tahmin_uret(simulasyon_verisi, s))
                 hits = len(tahmin & gercek_sonuc)
-                perf_sonuclari.append({"Strateji": s, "İsabet (20'de)": hits, "Tahmin": sorted(list(tahmin))})
+                # Sütun adını f-string dostu 'Isabet' olarak değiştirdik
+                perf_sonuclari.append({"Strateji": s, "Isabet": hits, "Tahmin": sorted(list(tahmin))})
             
-            df_perf = pd.DataFrame(perf_sonuclari).sort_values(by="İsabet (20'de)", ascending=False)
+            df_perf = pd.DataFrame(perf_sonuclari).sort_values(by="Isabet", ascending=False)
             
             c1, c2 = st.columns([1, 2])
             with c1:
                 st.write(f"🔍 **Son Gerçekleşen ({df.iloc[0]['CekilisNo']}):**")
                 st.markdown(" ".join([f"<span style='color:#FFD700; font-weight:bold;'>{n}</span>" for n in sorted(list(gercek_sonuc))]), unsafe_allow_html=True)
                 
-                fig_perf = px.bar(df_perf, x="İsabet (20'de)", y="Strateji", orientation='h', color="İsabet (20'de)", color_continuous_scale="Viridis")
+                fig_perf = px.bar(df_perf, x="Isabet", y="Strateji", orientation='h', color="Isabet", color_continuous_scale="Viridis")
+                fig_perf.update_layout(xaxis_title="İsabet (20'de)") # Grafikte düzgün görünmesi için başlığı elgöz kararı düzelttik
                 st.plotly_chart(fig_perf, use_container_width=True)
             
             with c2:
@@ -136,7 +138,8 @@ else:
                 for _, row in df_perf.iterrows():
                     hit_nums = sorted(list(set(row['Tahmin']) & gercek_sonuc))
                     hit_txt = ", ".join(map(str, hit_nums)) if hit_nums else "Yok"
-                    st.markdown(f"**{row['Strateji']}:** {row['İsabet (20\'de)']} İsabet → `{hit_txt}`")
+                    # f-string içindeki o tehlikeli ters eğik çizgi (\) tamamen kaldırıldı:
+                    st.markdown(f"**{row['Strateji']}:** {row['Isabet']} İsabet → `{hit_txt}`")
 
             st.markdown("---")
             st.subheader("🔮 Bir Sonraki Çekiliş İçin Canlı Tahminler (Next Round)")
