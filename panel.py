@@ -6,7 +6,7 @@ import os
 import istatistik  # Matematik motorumuz bağlı
 
 # --- SAYFA AYARLARI ---
-st.set_page_config(page_title="Hızlı On Numara Kuantum Analiz Terminali", layout="wide")
+st.set_page_config(page_title="Hızlı On Numara Çok Boyutlu Kuantum Terminali", layout="wide")
 
 # --- BULUT BAĞLANTISI ---
 GITHUB_CSV_URL = "https://raw.githubusercontent.com/egemenulucay-52/hizli-on-numara/main/hizli_on_numara.csv"
@@ -27,8 +27,8 @@ def veriyi_yukle():
 df, veri_kaynagi = veriyi_yukle()
 
 # --- BAŞLIK ---
-st.markdown("<h1 style='text-align: center; font-size: 26px; font-weight: bold;'>🎯 Hızlı On Numara Gelişmiş Analiz Terminali</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; font-size: 14px; color: #888;'>Makro Ölçekli Kantitatif ve Rastlantısallık Laboratuvarı</p>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; font-size: 26px; font-weight: bold;'>🎯 Hızlı On Numara Çok Boyutlu Kuantum Terminali</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-size: 14px; color: #888;'>Kombinasyonel Veri Madenciliği ve Non-Linear Tahmin Laboratuvarı</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 st.sidebar.markdown(f"**Veri Kaynağı:** {veri_kaynagi}")
@@ -49,7 +49,7 @@ else:
     tum_sayilar = analiz_df[sayi_kolonlari].values.flatten()
     frekanslar = pd.Series(tum_sayilar).value_counts().reindex(range(1, 81), fill_value=0)
     
-    # --- 💥 GELİŞMİŞ ÖNBELLEK MOTORU ---
+    # --- 💥 YENİ NESİL GELİŞMİŞ ÖNBELLEK MOTORU (HIZLANDIRILMIŞ NUMPY MATRİSLERİ) ---
     @st.cache_data(ttl=60)
     def cached_gecikme_analizi(_df_slice):
         return istatistik.gecikme_derinligi_analizi(_df_slice, sayi_kolonlari)
@@ -67,145 +67,144 @@ else:
         return istatistik.markov_zinciri_matrisi(_df_slice, sayi_kolonlari)
 
     @st.cache_data(ttl=60)
-    def cached_macd_ve_varyans_analizi(_df):
+    def cached_kuantum_makro_motoru(_df):
         df_len = len(_df)
+        # 1. MACD Trend İvmesi
         short_len = min(15, df_len)
         long_len = min(150, df_len)
-        
-        short_vals = _df.head(short_len)[sayi_kolonlari].values.flatten()
-        long_vals = _df.head(long_len)[sayi_kolonlari].values.flatten()
-        
-        short_freq = pd.Series(short_vals).value_counts().reindex(range(1, 81), fill_value=0) / short_len
-        long_freq = pd.Series(long_vals).value_counts().reindex(range(1, 81), fill_value=0) / long_len
-        
+        short_freq = pd.Series(_df.head(short_len)[sayi_kolonlari].values.flatten()).value_counts().reindex(range(1, 81), fill_value=0) / short_len
+        long_freq = pd.Series(_df.head(long_len)[sayi_kolonlari].values.flatten()).value_counts().reindex(range(1, 81), fill_value=0) / long_len
         macd_scores = short_freq - long_freq
-        wake_up_scores, mean_gaps, std_gaps, current_gaps = {}, {}, {}, {}
         
+        # 2. Birlikte Çıkma İlişki Ağları (Co-occurrence)
+        matrix_co = np.zeros((80, 80))
+        for _, row in _df.head(100)[sayi_kolonlari].iterrows():
+            nums = row.values.astype(int) - 1
+            for i in nums:
+                for j in nums:
+                    if i != j: matrix_co[i, j] += 1
+        son_cekilis_nums = _df.iloc[0][sayi_kolonlari].values.astype(int)
+        co_scores = np.zeros(80)
+        for n in son_cekilis_nums:
+            co_scores += matrix_co[:, n-1]
+            
+        # 3. Poisson Boşluk Anomalisi
+        poisson_scores = []
         for num in range(1, 81):
             appears = np.where((_df[sayi_kolonlari] == num).any(axis=1))[0]
-            if len(appears) > 1:
-                gaps = np.diff(appears)
-                mean_g = float(np.mean(gaps))
-                std_g = float(np.std(gaps)) if len(gaps) > 1 else 1.0
-                curr_g = float(appears[0])
-                wake_up = (curr_g - mean_g) / std_g if std_g > 0 else 0.0
-            else:
-                mean_g, std_g, wake_up = 4.0, 2.0, 0.0
-                curr_g = float(appears[0]) if len(appears) > 0 else float(df_len)
-                
-            wake_up_scores[num] = wake_up
-            mean_gaps[num] = mean_g
-            std_gaps[num] = std_g
-            current_gaps[num] = curr_g
+            if len(appears) > 0:
+                curr_gap = float(appears[0])
+                lam = len(appears) / df_len
+                p_score = 1.0 - np.exp(-lam * curr_gap)
+            else: p_score = 0.0
+            poisson_scores.append(p_score)
+            
+        # 4. Bölge Yoğunluk Kilit Modeli (Zonal)
+        last_10_matrix = _df.head(10)[sayi_kolonlari].values.flatten()
+        zone_counts = pd.Series((last_10_matrix - 1) // 10).value_counts().reindex(range(8), fill_value=0)
+        zonal_scores = []
+        for num in range(1, 81):
+            zone = (num - 1) // 10
+            zonal_scores.append(float(25 - zone_counts[zone]))
             
         return pd.DataFrame({
             "Sayı": range(1, 81),
             "MACD_Skoru": macd_scores.values,
-            "Mevcut_Gecikme": [current_gaps[n] for n in range(1, 81)],
-            "Ortalama_Dongu": [mean_gaps[n] for n in range(1, 81)],
-            "Standart_Sapma": [std_gaps[n] for n in range(1, 81)],
-            "Varyans_Gerilimi": [wake_up_scores[n] for n in range(1, 81)]
+            "Iliski_Agi_Skoru": co_scores,
+            "Poisson_Anomalisi": poisson_scores,
+            "Bolge_Yogunluk_Eksigi": zonal_scores
         })
     
-    # Hesaplama çağrıları
-    df_gecikme = cached_gecikme_analizi(analiz_df)
-    df_mv = cached_macd_ve_varyans_analizi(df)
+    # Yeni motoru çalıştır ve matrisleri al
+    df_kuant = cached_kuantum_makro_motoru(df)
     markov_matrisi = cached_markov_zinciri_matrisi(analiz_df)
+    df_gecikme = cached_gecikme_analizi(analiz_df)
     
     chi2_stat, p_value = istatistik.ki_kare_testi(analiz_df, sayi_kolonlari)
     if p_value > 0.05:
-        st.success(f"🎲 **Rastlantısallık Denetimi:** Sistem %95 güvenilirlikle tamamen adil ve rastgele çalışıyor. (p-değeri: {p_value:.4f})")
+        st.success(f"🎲 **Rastlantısallık Denetimi:** Sistem %95 güvenilirlikle adil çalışıyor. (p-değeri: {p_value:.4f})")
     else:
-        st.warning(f"⚠️ **Rastlantısallık Sapması:** Sayı dağılımlarında teorik sınırın dışında kümelenmeler saptandı! (p-değeri: {p_value:.4f})")
+        st.warning(f"⚠️ **Rastlantısallık Sapması:** Kümelenmeler saptandı! (p-değeri: {p_value:.4f})")
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric(label="🔥 En Sıcak Sayı", value=f"Sayı: {frekanslar.idxmax()}", delta=f"{frekanslar.max()} Kez Çıktı")
+        st.metric(label="🔥 En Sıcak Sayı", value=f"Sayı: {frekanslar.idxmax()}", delta=f"{frekanslar.max()} Kez")
     with col2:
-        st.metric(label="❄️ En Soğuk Sayı", value=f"Sayı: {frekanslar.idxmin()}", delta=f"{frekanslar.min()} Kez Çıktı", delta_color="inverse")
+        st.metric(label="❄️ En Soğuk Sayı", value=f"Sayı: {frekanslar.idxmin()}", delta=f"{frekanslar.min()} Kez", delta_color="inverse")
     with col3:
         st.metric(label="🎰 Son Çekiliş No", value=f"No: {df.iloc[0]['CekilisNo']}")
 
-    # --- SIKINTISIZ 7'Lİ SEKME SİSTEMİ ---
+    # --- YENİLENMİŞ 7'Lİ SEKME SİSTEMİ ---
     tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "📊 Frekans & Gecikme", 
         "🧠 Rastlantısallık & Kaos", 
-        "📈 Trend & Varyans (Lag-3 Çözümü)", 
+        "📈 Çok Boyutlu Kuant Laboratuvarı", 
         "⛓️ Markov Zinciri", 
-        "🔮 Akıllı Kupon Motoru", 
+        "🔮 Akıllı Kupon & Kesişim Motoru", 
         "📋 Canlı Veri Havuzu",
         "🏆 Strateji Performans & Tahmin"
     ])
     
-    # --- TAB 1 ---
     with tab1:
         st.subheader("📊 Sayıların Görülme Sıklıkları")
         grafik_df = pd.DataFrame({"Sayı": frekanslar.index, "Çıkma Sayısı": frekanslar.values}).sort_values(by="Sayı")
         fig = px.bar(grafik_df, x="Sayı", y="Çıkma Sayısı", color="Çıkma Sayısı", color_continuous_scale="Viridis", height=350)
-        fig.update_layout(xaxis=dict(tickmode='linear', tick0=1, dtick=5), bargap=0.1)
         st.plotly_chart(fig, use_container_width=True)
         
         st.markdown("---")
-        st.subheader("⏳ Geometrik Dağılımlı Gecikme Derinliği (En Uzun Süredir Çıkmayanlar)")
-        top_gecikme = df_gecikme.head(10).reset_index().rename(columns={"index": "Sayı", "gecikme": "Kaç Turdur Çıkmıyor?", "olasilik": "Bu Süreye Ulaşma Olasılığı"})
-        top_gecikme["Bu Süreye Ulaşma Olasılığı"] = top_gecikme["Bu Süreye Ulaşma Olasılığı"].apply(lambda x: f"%{x*100:.3f}")
+        st.subheader("⏳ Gecikme Derinliği")
+        top_gecikme = df_gecikme.head(10).reset_index().rename(columns={"index": "Sayı", "gecikme": "Kaç Turdur Çıkmıyor?", "olasilik": "Olasılık"})
+        top_gecikme["Olasılık"] = top_gecikme["Olasılık"].apply(lambda x: f"%{x*100:.3f}")
         st.dataframe(top_gecikme, use_container_width=True)
 
-    # --- TAB 2 ---
     with tab2:
-        st.subheader("📈 Veri Kümesinin Merkezi Eğilim ve Ortalamalar Analizi")
+        st.subheader("📈 Merkezi Eğilim Analizleri")
         aritmetik_ort = float(np.mean(tum_sayilar))
         geometrik_ort = float(np.exp(np.mean(np.log(tum_sayilar))))
         medyan_deger = float(np.median(tum_sayilar))
         
         c_ort1, c_ort2, c_ort3 = st.columns(3)
-        with c_ort1:
-            st.metric(label="🧮 Genel Aritmetik Ortalama", value=f"{aritmetik_ort:.2f}", delta=f"{aritmetik_ort - 40.50:+.2f} (Teorik Sapma)")
-        with c_ort2:
-            st.metric(label="📐 Genel Geometrik Ortalama", value=f"{geometrik_ort:.2f}")
-        with c_ort3:
-            st.metric(label="⚖️ Olasılık Dengesi (Medyan)", value=f"{medyan_deger:.1f}")
-            
-        st.markdown("---")
-        st.subheader("📐 Hipergeometrik Tur Geçiş Analizi (Overlap)")
-        seri_gecis = cached_tur_gecis_analizi(analiz_df)
-        df_gecis = pd.DataFrame({"Ortak Sayı Adedi": seri_gecis.index, "Görülme Sıklığı": seri_gecis.values})
-        fig_gecis = px.bar(df_gecis, x="Ortak Sayı Adedi", y="Görülme Sıklığı", color="Görülme Sıklığı", color_continuous_scale="Purples", height=350)
-        st.plotly_chart(fig_gecis, use_container_width=True)
+        with c_ort1: st.metric(label="🧮 Aritmetik Ortalama", value=f"{aritmetik_ort:.2f}")
+        with c_ort2: st.metric(label="📐 Geometrik Ortalama", value=f"{geometrik_ort:.2f}")
+        with c_ort3: st.metric(label="⚖️ Medyan Olasılık", value=f"{medyan_deger:.1f}")
         
         st.markdown("---")
-        st.subheader("🌌 Shannon Entropisi ile Çekilişlerin Kaos Dağılımı")
+        st.subheader("🌌 Shannon Entropisi (Kaos Dağılımı)")
         seri_entropi = cached_shannon_entropisi(analiz_df)
-        fig_ent = px.histogram(seri_entropi, nbins=15, labels={'value': 'Shannon Entropi Skoru (Kaos Yoğunluğu)'}, color_discrete_sequence=['#0083B0'], height=320)
-        fig_ent.update_layout(showlegend=False)
+        fig_ent = px.histogram(seri_entropi, nbins=15, labels={'value': 'Shannon Entropi Skoru'}, color_discrete_sequence=['#0083B0'], height=300)
         st.plotly_chart(fig_ent, use_container_width=True)
 
-    # --- TAB 3 ---
+    # --- TAB 3: BAŞTAN AŞAĞI YENİLENEN KUANT LABORATUVARI ---
     with tab3:
-        st.subheader("📊 Strateji 2: Loto MACD Trend ve Momentum Analizi")
-        st.write("Son 15 çekilişin ivmesi ile son 150 çekilişin makro frekansı kıyaslanır. Skoru pozitif ve yüksek olanlar yükselen trenddedir.")
-        
-        top_macd = df_mv.sort_values(by="MACD_Skoru", ascending=False).head(15)
-        fig_macd = px.bar(top_macd, x="Sayı", y="MACD_Skoru", color="MACD_Skoru", color_continuous_scale="Reds", height=320)
-        fig_macd.update_layout(xaxis=dict(type='category'))
-        st.plotly_chart(fig_macd, use_container_width=True)
-        
-        st.markdown("---")
-        st.subheader("⚖️ Strateji 3: Varyans Gerilimi ve Esneklik Denge Sınırı")
-        st.write("Gerilim puanı yüksek (2.0 ve üzeri) olan sayılar varyans sınırlarını aşırı esnetmişlerdir ve patlamaya hazırdır.")
-        
-        top_varyans = df_mv.sort_values(by="Varyans_Gerilimi", ascending=False).head(15)
-        fig_var = px.bar(top_varyans, x="Sayı", y="Varyans_Gerilimi", color="Varyans_Gerilimi", color_continuous_scale="solar", height=320)
-        fig_var.update_layout(xaxis=dict(type='category'))
-        st.plotly_chart(fig_var, use_container_width=True)
+        st.subheader("🕸️ 1. Birlikte Çıkma İlişki Ağları (Co-occurrence Network)")
+        st.write("Son çekilişteki sayıların geçmişte en çok hangi partnerlerle beraber çıktığını kombinasyonel olarak hesaplar.")
+        top_co = df_kuant.sort_values(by="Iliski_Agi_Skoru", ascending=False).head(15)
+        fig_co = px.bar(top_co, x="Sayı", y="Iliski_Agi_Skoru", color="Iliski_Agi_Skoru", color_continuous_scale="Purples", height=280)
+        fig_co.update_layout(xaxis=dict(type='category'))
+        st.plotly_chart(fig_co, use_container_width=True)
         
         st.markdown("---")
-        st.subheader("📋 İki Stratejinin Birleşik Veri Matrisi")
-        st.dataframe(df_mv.sort_values(by="Varyans_Gerilimi", ascending=False), use_container_width=True)
+        st.subheader("⏳ 2. Poisson Boşluk Anomalisi Sınırı")
+        st.write("Sayıların çıkış hızlarına göre mevcut gecikmelerinin oluşturduğu non-linear anomali gerilimi. 1.0'a yaklaşanlar patlamak zorundadır.")
+        top_poi = df_kuant.sort_values(by="Poisson_Anomalisi", ascending=False).head(15)
+        fig_poi = px.bar(top_poi, x="Sayı", y="Poisson_Anomalisi", color="Poisson_Anomalisi", color_continuous_scale="solar", height=280)
+        fig_poi.update_layout(xaxis=dict(type='category'))
+        st.plotly_chart(fig_poi, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("🧱 3. Bölge Yoğunluk Eksik Matrisi (Zonal Deficit)")
+        st.write("1-80 tahtasındaki 8 ana bloktan son 10 çekilişte teorik ortalamanın altında kalarak kuraklık yaşayan bölgeler.")
+        top_zon = df_kuant.sort_values(by="Bolge_Yogunluk_Eksigi", ascending=False).head(15)
+        fig_zon = px.bar(top_zon, x="Sayı", y="Bolge_Yogunluk_Eksigi", color="Bolge_Yogunluk_Eksigi", color_continuous_scale="Teal", height=280)
+        fig_zon.update_layout(xaxis=dict(type='category'))
+        st.plotly_chart(fig_zon, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("📋 Yeni Nesil Kuant Matris Tablosu")
+        st.dataframe(df_kuant.sort_values(by="Poisson_Anomalisi", ascending=False), use_container_width=True)
 
-    # --- TAB 4 ---
     with tab4:
-        st.subheader("⛓️ Koşullu Olasılık Matrisi ve Sayı Tetikleyicileri")
+        st.subheader("⛓️ Markov Zinciri Koşullu Olasılık")
         secilen_sayi = st.selectbox("Analiz Edilecek Kilit Sayıyı Seçin:", list(range(1, 81)), index=22)
         olasiliklar = markov_matrisi[secilen_sayi - 1]
         df_markov = pd.DataFrame({"Sonraki Sayı": list(range(1, 81)), "Tetiklenme Olasılığı": olasiliklar})
@@ -214,49 +213,37 @@ else:
         fig_markov.update_layout(xaxis=dict(type='category'))
         st.plotly_chart(fig_markov, use_container_width=True)
 
-    # --- TAB 5 (AKILLI KUPON MOTORU VE YENİ KESİŞİM LABORATUVARI) ---
+    # --- TAB 5: YENİ NESİL KESİŞİM VE KUPON MOTORU ---
     with tab5:
-        # 🔥 --- YENİ EKLENTİ: HAVUZ KESİŞİM LABORATUVARI ---
         st.markdown("### 🧬 Strateji Havuz Kesişim Laboratuvarı (Ortak Sayı Bulucu)")
-        st.write("İki farklı strateji havuzunun kesiştiği (çakışan) tüm sayıları adet sınırı olmadan listeler. Bu sayıları elinle seçip kuponlarında kullanabilirsin.")
+        st.write("Yeni eklenen çok boyutlu havuzların birbiriyle çakışan ortak sayılarını filtre koymadan ham liste olarak dökmenizi sağlar.")
         
         col_h1, col_h2 = st.columns(2)
         with col_h1:
-            havuz1_secim = st.selectbox("1. Strateji Havuzu Seçin:", ["🔥 Sıcak Sayılar Havuzu (İlk 30)", "❄️ Derin Gecikme Havuzu (İlk 30)", "📈 MACD İvme Havuzu (İlk 30)", "⚖️ Varyans Gerilim Havuzu (İlk 30)", "⛓️ Markov Yoğunluklu Karma (İlk 30)"], index=2, key="h1_key")
+            havuz1_secim = st.selectbox("1. Strateji Havuzu Seçin:", ["🔥 Sıcak Sayılar (İlk 30)", "❄️ Derin Gecikme (İlk 30)", "📈 MACD İvme Havuzu (İlk 30)", "🕸️ İlişki Ağları Ortakları (İlk 30)", "⏳ Poisson Anomalisi Liderleri (İlk 30)", "🧱 Bölge Yoğunluk Eksikleri (İlk 30)"], index=2)
         with col_h2:
-            havuz2_secim = st.selectbox("2. Strateji Havuzu Seçin:", ["🔥 Sıcak Sayılar Havuzu (İlk 30)", "❄️ Derin Gecikme Havuzu (İlk 30)", "📈 MACD İvme Havuzu (İlk 30)", "⚖️ Varyans Gerilim Havuzu (İlk 30)", "⛓️ Markov Yoğunluklu Karma (İlk 30)"], index=0, key="h2_key")
+            havuz2_secim = st.selectbox("2. Strateji Havuzu Seçin:", ["🔥 Sıcak Sayılar (İlk 30)", "❄️ Derin Gecikme (İlk 30)", "📈 MACD İvme Havuzu (İlk 30)", "🕸️ İlişki Ağları Ortakları (İlk 30)", "⏳ Poisson Anomalisi Liderleri (İlk 30)", "🧱 Bölge Yoğunluk Eksikleri (İlk 30)"], index=4)
             
-        def get_static_pool(secim, _freq, _df_gecikme, _df_mv, _markov_matrisi, _df, _sayi_kolonlari):
-            if "Sıcak" in secim:
-                return _freq.sort_values(ascending=False).index.tolist()[:30]
-            elif "Gecikme" in secim:
-                return _df_gecikme.head(30).index.tolist()
-            elif "MACD" in secim:
-                return _df_mv.sort_values(by="MACD_Skoru", ascending=False)["Sayı"].tolist()[:30]
-            elif "Varyans" in secim:
-                return _df_mv.sort_values(by="Varyans_Gerilimi", ascending=False)["Sayı"].tolist()[:30]
-            elif "Markov" in secim:
-                son_cekilis_sayilari = _df.iloc[0][_sayi_kolonlari].values.astype(int)
-                toplam_olasiliklar = np.zeros(80)
-                for num in son_cekilis_sayilari:
-                    toplam_olasiliklar += _markov_matrisi[num - 1]
-                return (np.argsort(toplam_olasiliklar)[::-1] + 1).tolist()[:30]
+        def get_static_pool_v2(secim, _freq, _df_gecikme, _df_k, _markov_matrisi, _df, _sayi_kolonlari):
+            if "Sıcak" in secim: return _freq.sort_values(ascending=False).index.tolist()[:30]
+            elif "Gecikme" in secim: return _df_gecikme.head(30).index.tolist()
+            elif "MACD" in secim: return _df_k.sort_values(by="MACD_Skoru", ascending=False)["Sayı"].tolist()[:30]
+            elif "İlişki" in secim: return _df_k.sort_values(by="Iliski_Agi_Skoru", ascending=False)["Sayı"].tolist()[:30]
+            elif "Poisson" in secim: return _df_k.sort_values(by="Poisson_Anomalisi", ascending=False)["Sayı"].tolist()[:30]
+            elif "Bölge" in secim: return _df_k.sort_values(by="Bolge_Yogunluk_Eksigi", ascending=False)["Sayı"].tolist()[:30]
             return []
 
-        h1_list = get_static_pool(havuz1_secim, frekanslar, df_gecikme, df_mv, markov_matrisi, df, sayi_kolonlari)
-        h2_list = get_static_pool(havuz2_secim, frekanslar, df_gecikme, df_mv, markov_matrisi, df, sayi_kolonlari)
-        
+        h1_list = get_static_pool_v2(havuz1_secim, frekanslar, df_gecikme, df_kuant, markov_matrisi, df, sayi_kolonlari)
+        h2_list = get_static_pool_v2(havuz2_secim, frekanslar, df_gecikme, df_kuant, markov_matrisi, df, sayi_kolonlari)
         ortak_sayilar = sorted(list(set(h1_list) & set(h2_list)))
         
         if ortak_sayilar:
             ortak_html = " ".join([f"<span style='display:inline-block; background-color:#E65100; color:white; border-radius:50%; width:36px; height:36px; text-align:center; line-height:36px; font-weight:bold; font-size:14px; margin:3px;'>{num}</span>" for num in ortak_sayilar])
-            st.markdown(f"🎯 **Seçilen İki Havuzda da Ortak Olan Sayılar ({len(ortak_sayilar)} Adet):**<br>{ortak_html}", unsafe_allow_html=True)
-        else:
-            st.info("Bu iki havuzun çakışan ortak bir sayısı bulunamadı.")
+            st.markdown(f"🎯 **Çakışan Ortak Sayılar Havuzu ({len(ortak_sayilar)} Adet):**<br>{ortak_html}", unsafe_allow_html=True)
+        else: st.info("Bu kombinasyonda çakışan ortak sayı saptanamadı.")
             
         st.markdown("---")
         st.markdown("### 🧙‍♂️ Otomatik Filtreli Kupon Jeneratörü")
-        
         adet_kupon = st.slider("Kaç Sıra Kupon Üretilsin?", min_value=1, max_value=5, value=3)
         kupon_ayarlari = []
         
@@ -267,26 +254,15 @@ else:
                     s_adedi = st.slider(f"Kupon {k} Kaç Sayıdan Oluşsun?", min_value=1, max_value=10, value=10, key=f"sayi_{k}")
                 with col_filtre:
                     filtreler = st.multiselect(
-                        f"Kupon {k} İçin Uygulanacak Süzgeçler (Çoklu Seçim):",
-                        [
-                            "🔥 Sıcak Sayılar Havuzu (En Çok Çıkan İlk 30 Sayı)",
-                            "❄️ Derin Gecikme Havuzu (En Uzun Süredir Çıkmayan İlk 30 Sayı)",
-                            "📈 MACD İvme Havuzu (Trendi En Yüksek İlk 30 Sayı) 🚀",
-                            "⚖️ Varyans Gerilim Havuzu (Patlamaya En Yakın İlk 30 Sayı) 💥",
-                            "⛓️ Markov Yoğunluklu Karma (Son Çekilişin Tetiklediği En Güçlü Sayılar)",
-                            "☯️ Dengeli Tek / Çift Filtresi (Sayıları Yarı Yarıya Oranlar)",
-                            "📏 Ardışık Sayı Yasağı (Kuponda Yan Yana Sayıları Engeller)",
-                            "🌌 Shannon Kaos Standardı (Sayı Dağılımının İdeal Entropide Olmasını Şart Koşar)"
-                        ],
-                        default=["📈 MACD İvme Havuzu (Trendi En Yüksek İlk 30 Sayı) 🚀"],
+                        f"Kupon {k} İçin Uygulanacak Süzgeçler:",
+                        ["🔥 Sıcak Sayılar", "❄️ Derin Gecikme", "📈 MACD İvme Havuzu 🚀", "🕸️ İlişki Ağları Havuzu 🕸️", "⏳ Poisson Anomalisi Havuzu ⌛", "🧱 Bölge Yoğunluk Süzgeci 🧱", "☯️ Dengeli Tek / Çift", "📏 Ardışık Sayı Yasağı", "🌌 Shannon Kaos Standardı"],
+                        default=["📈 MACD İvme Havuzu 🚀", "⏳ Poisson Anomalisi Havuzu ⌛"],
                         key=f"filtre_{k}"
                     )
                 kupon_ayarlari.append({"sıra": k, "sayi_adedi": s_adedi, "filtreler": filtreler})
         
-        if st.button("🎰 Tüm Kuponları Kendi Kriterleriyle Süz ve Üret"):
-            with st.spinner("🔮 Kuantum süzgeçler hesaplanıyor..."):
-                st.markdown(f"### 🎫 Süzülmüş Özel Kupon Portföyünüz:")
-                
+        if st.button("🎰 Kuponları Süz ve Üret"):
+            with st.spinner("🔮 Kuantum süzgeçler işleniyor..."):
                 for ayar in kupon_ayarlari:
                     k_idx = ayar["sıra"]
                     s_adedi = ayar["sayi_adedi"]
@@ -295,115 +271,78 @@ else:
                     aday_havuz = list(range(1, 81))
                     havuz_listeleri = []
                     
-                    if "🔥 Sıcak Sayılar Havuzu (En Çok Çıkan İlk 30 Sayı)" in filtreler:
-                        havuz_listeleri.append(frekanslar.sort_values(ascending=False).index.tolist()[:30])
-                    if "❄️ Derin Gecikme Havuzu (En Uzun Süredir Çıkmayan İlk 30 Sayı)" in filtreler:
-                        havuz_listeleri.append(df_gecikme.head(30).index.tolist())
-                    if "📈 MACD İvme Havuzu (Trendi En Yüksek İlk 30 Sayı) 🚀" in filtreler:
-                        havuz_listeleri.append(df_mv.sort_values(by="MACD_Skoru", ascending=False)["Sayı"].tolist()[:30])
-                    if "⚖️ Varyans Gerilim Havuzu (Patlamaya En Yakın İlk 30 Sayı) 💥" in filtreler:
-                        havuz_listeleri.append(df_mv.sort_values(by="Varyans_Gerilimi", ascending=False)["Sayı"].tolist()[:30])
-                    if "⛓️ Markov Yoğunluklu Karma (Son Çekilişin Tetiklediği En Güçlü Sayılar)" in filtreler:
-                        son_cekilis_sayilari = df.iloc[0][sayi_kolonlari].values.astype(int)
-                        toplam_olasiliklar = np.zeros(80)
-                        for num in son_cekilis_sayilari:
-                            toplam_olasiliklar += markov_matrisi[num - 1]
-                        en_iyi_markov = (np.argsort(toplam_olasiliklar)[::-1] + 1).tolist()[:30]
-                        havuz_listeleri.append(en_iyi_markov)
+                    if "🔥 Sıcak Sayılar" in filtreler: havuz_listeleri.append(frekanslar.sort_values(ascending=False).index.tolist()[:30])
+                    if "❄️ Derin Gecikme" in filtreler: havuz_listeleri.append(df_gecikme.head(30).index.tolist())
+                    if "📈 MACD İvme Havuzu 🚀" in filtreler: havuz_listeleri.append(df_kuant.sort_values(by="MACD_Skoru", ascending=False)["Sayı"].tolist()[:30])
+                    if "🕸️ İlişki Ağları Havuzu 🕸️" in filtreler: havuz_listeleri.append(df_kuant.sort_values(by="Iliski_Agi_Skoru", ascending=False)["Sayı"].tolist()[:30])
+                    if "⏳ Poisson Anomalisi Havuzu ⌛" in filtreler: havuz_listeleri.append(df_kuant.sort_values(by="Poisson_Anomalisi", ascending=False)["Sayı"].tolist()[:30])
+                    if "🧱 Bölge Yoğunluk Süzgeci 🧱" in filtreler: havuz_listeleri.append(df_kuant.sort_values(by="Bolge_Yogunluk_Eksigi", ascending=False)["Sayı"].tolist()[:30])
                     
                     if havuz_listeleri:
                         aday_havuz = list(set([num for sublist in havuz_listeleri for num in sublist]))
                         if len(aday_havuz) < s_adedi: aday_havuz = list(range(1, 81))
                     
-                    kupon_bulundu = False
-                    deneme_sayaci = 0
-                    
-                    while deneme_sayaci < 1200:
-                        deneme_sayaci += 1
+                    kupon_bulundu, deneme = False, 0
+                    while deneme < 1000:
+                        deneme += 1
                         aday_kupon = sorted(np.random.choice(aday_havuz, s_adedi, replace=False).tolist())
-                        
-                        if "☯️ Dengeli Tek / Çift Filtresi (Sayıları Yarı Yarıya Oranlar)" in filtreler:
-                            tekler = [n for n in aday_kupon if n % 2 != 0]
-                            ciftler = [n for n in aday_kupon if n % 2 == 0]
-                            if abs(len(tekler) - len(ciftler)) > 2: continue
-                        
-                        if "📏 Ardışık Sayı Yasağı (Kuponda Yan Yana Sayıları Engeller)" in filtreler:
-                            has_ardisik = False
-                            for idx in range(len(aday_kupon) - 1):
-                                if aday_kupon[idx+1] - aday_kupon[idx] == 1:
-                                    has_ardisik = True
-                                    break
-                            if has_ardisik: continue
-                        
-                        if "🌌 Shannon Kaos Standardı (Sayı Dağılımının İdeal Entropide Olmasını Şart Koşar)" in filtreler and s_adedi > 3:
+                        if "☯️ Dengeli Tek / Çift" in filtreler:
+                            if abs(len([n for n in aday_kupon if n%2!=0]) - len([n for n in aday_kupon if n%2==0])) > 2: continue
+                        if "📏 Ardışık Sayı Yasağı" in filtreler:
+                            if any(aday_kupon[i+1] - aday_kupon[i] == 1 for i in range(len(aday_kupon)-1)): continue
+                        if "🌌 Shannon Kaos Standardı" in filtreler and s_adedi > 3:
                             farklar = np.diff(aday_kupon)
-                            toplam_fark = farklar.sum()
-                            if toplam_fark > 0:
-                                p = farklar / toplam_fark
+                            if farklar.sum() > 0:
+                                p = farklar / farklar.sum()
                                 p = p[p > 0]
-                                entropi = -np.sum(p * np.log2(p))
-                                max_ent = np.log2(len(farklar))
-                                if entropi < (max_ent * 0.75): continue
+                                if -np.sum(p * np.log2(p)) < (np.log2(len(farklar)) * 0.75): continue
                         
                         kupon_html = " ".join([f"<span style='display:inline-block; background-color:#1565C0; color:white; border-radius:50%; width:36px; height:36px; text-align:center; line-height:36px; font-weight:bold; font-size:13px; margin:3px;'>{num}</span>" for num in aday_kupon])
                         st.markdown(f"**Sıra {k_idx} ({s_adedi} Sayı):** {kupon_html}", unsafe_allow_html=True)
                         kupon_bulundu = True
                         break
-                    
-                    if not kupon_bulundu:
-                        st.error(f"❌ **Sıra {k_idx}:** Uygun kupon üretilemedi.")
+                    if not kupon_bulundu: st.error(f"❌ Sıra {k_idx} için uygun kombinasyon süzülemedi.")
                 st.balloons()
 
-    # --- TAB 6 ---
     with tab6:
-        st.subheader("📋 Sistem Hafızasında Kayıtlı Güncel Çekilişler")
+        st.subheader("📋 Güncel Çekiliş Veritabanı")
         st.dataframe(analiz_df, use_container_width=True)
 
-    # --- 🧙 TAHMİN MOTORU YARDIMCI FONKSİYONU ---
-    def strateji_tahmin_uret(data_slice, strateji_adi):
-        mv_slice = cached_macd_ve_varyans_analizi(data_slice)
+    # --- TAHMİN YARDIMCI MOTORU ---
+    def strateji_tahmin_uret_v2(data_slice, strateji_adi):
+        k_slice = cached_kuantum_makro_motoru(data_slice)
         freq_slice = pd.Series(data_slice[sayi_kolonlari].values.flatten()).value_counts().reindex(range(1, 81), fill_value=0)
         
         havuz = []
-        if strateji_adi == "🔥 Sadece Sıcak":
-            havuz = freq_slice.sort_values(ascending=False).index[:30].tolist()
-        elif strateji_adi == "❄️ Sadece Soğuk":
-            havuz = istatistik.gecikme_derinligi_analizi(data_slice, sayi_kolonlari).index[:30].tolist()
-        elif strateji_adi == "🚀 Trend Takipçi (MACD)":
-            havuz = mv_slice.sort_values(by="MACD_Skoru", ascending=False)["Sayı"].tolist()[:30]
-        elif strateji_adi == "💥 Patlama Adayları (Varyans)":
-            havuz = mv_slice.sort_values(by="Varyans_Gerilimi", ascending=False)["Sayı"].tolist()[:30]
-        elif strateji_adi == "⛓️ Zincir Reaksiyonu (Markov)":
-            son_cekilis = data_slice.iloc[0][sayi_kolonlari].values.astype(int)
-            probs = np.zeros(80)
-            for n in son_cekilis: probs += markov_matrisi[n-1]
-            havuz = (np.argsort(probs)[::-1] + 1).tolist()[:30]
-        elif strateji_adi == "💎 Kuantum Hibrit (MACD + Varyans)":
-            havuz = list(set(mv_slice.sort_values(by="MACD_Skoru", ascending=False)["Sayı"].tolist()[:20]) | set(mv_slice.sort_values(by="Varyans_Gerilimi", ascending=False)["Sayı"].tolist()[:20]))
+        if strateji_adi == "🔥 Sadece Sıcak": havuz = freq_slice.sort_values(ascending=False).index[:30].tolist()
+        elif strateji_adi == "❄️ Sadece Soğuk": havuz = istatistik.gecikme_derinligi_analizi(data_slice, sayi_kolonlari).index[:30].tolist()
+        elif strateji_adi == "🚀 Trend Takipçi (MACD)": havuz = k_slice.sort_values(by="MACD_Skoru", ascending=False)["Sayı"].tolist()[:30]
+        elif strateji_adi == "🕸️ İlişki Ağları (Co-occurrence)": havuz = k_slice.sort_values(by="Iliski_Agi_Skoru", ascending=False)["Sayı"].tolist()[:30]
+        elif strateji_adi == "⏳ Poisson Boşluk Anomalisi": havuz = k_slice.sort_values(by="Poisson_Anomalisi", ascending=False)["Sayı"].tolist()[:30]
+        elif strateji_adi == "🧱 Bölge Yoğunluk Süzgeci": havuz = k_slice.sort_values(by="Bolge_Yogunluk_Eksigi", ascending=False)["Sayı"].tolist()[:30]
+        elif strateji_adi == "💎 Çok Boyutlu Kuant (MACD + Poisson)":
+            havuz = list(set(k_slice.sort_values(by="MACD_Skoru", ascending=False)["Sayı"].tolist()[:20]) | set(k_slice.sort_values(by="Poisson_Anomalisi", ascending=False)["Sayı"].tolist()[:20]))
         elif strateji_adi == "⚖️ Dengeleyici (Sıcak + Soğuk)":
             havuz = list(set(freq_slice.sort_values(ascending=False).index[:20]) | set(istatistik.gecikme_derinligi_analizi(data_slice, sayi_kolonlari).index[:20]))
-        elif strateji_adi == "⚡ Hızlı Tetik (Markov + Sıcak)":
+        elif strateji_adi == "⚡ Hızlı Tetik (Markov + İlişki)":
             son_n = data_slice.iloc[0][sayi_kolonlari].values.astype(int)
             probs = np.zeros(80)
             for n in son_n: probs += markov_matrisi[n-1]
-            havuz = list(set((np.argsort(probs)[::-1] + 1).tolist()[:20]) | set(freq_slice.sort_values(ascending=False).index[:20]))
-        elif strateji_adi == "🌪️ Kaotik Seçim (Varyans + Markov)":
-            havuz = list(set(mv_slice.sort_values(by="Varyans_Gerilimi", ascending=False)["Sayı"].tolist()[:20]) | set((np.argsort(np.sum(markov_matrisi, axis=0))[::-1] + 1).tolist()[:20]))
-        else:
-            havuz = np.random.choice(range(1,81), 40, replace=False).tolist()
-            
+            havuz = list(set((np.argsort(probs)[::-1] + 1).tolist()[:20]) | set(k_slice.sort_values(by="Iliski_Agi_Skoru", ascending=False)["Sayı"].tolist()[:20]))
+        else: havuz = np.random.choice(range(1,81), 40, replace=False).tolist()
+        
         return sorted(np.random.choice(havuz, 20, replace=False).tolist())
 
-    # --- TAB 7 (STRATEJİ PERFORMANS SİMÜLATÖRÜ VE LOG KAYITLARI) ---
+    # --- TAB 7: YENİ NESİL BACKTEST VE OTONOM LOG MATRİSİ ---
     with tab7:
         st.subheader("🏆 Strateji Performans Ölçümü (Backtest Mode)")
-        st.write("Sistem, son gerçekleşen çekilişi 'gelecek' sayıp, önceki verilerle 10 stratejiyi yarıştırır.")
+        st.write("Sistem, son gerçekleşen çekilişi 'gelecek' sayıp, 10 yeni nesil kuant stratejisini yarıştırır.")
         
-        stratejiler = [
+        stratejiler_v2 = [
             "🔥 Sadece Sıcak", "❄️ Sadece Soğuk", "🚀 Trend Takipçi (MACD)", 
-            "💥 Patlama Adayları (Varyans)", "⛓️ Zincir Reaksiyonu (Markov)", 
-            "💎 Kuantum Hibrit (MACD + Varyans)", "⚖️ Dengeleyici (Sıcak + Soğuk)", 
-            "⚡ Hızlı Tetik (Markov + Sıcak)", "🌪️ Kaotik Seçim (Varyans + Markov)", "🎰 Saf Olasılık (Random)"
+            "🕸️ İlişki Ağları (Co-occurrence)", "⏳ Poisson Boşluk Anomalisi", "🧱 Bölge Yoğunluk Süzgeci",
+            "💎 Çok Boyutlu Kuant (MACD + Poisson)", "⚖️ Dengeleyici (Sıcak + Soğuk)", 
+            "⚡ Hızlı Tetik (Markov + İlişki)", "🎰 Saf Olasılık (Random)"
         ]
 
         if len(df) > 10:
@@ -411,8 +350,8 @@ else:
             simulasyon_verisi = df.iloc[1:]
             
             perf_sonuclari = []
-            for s in stratejiler:
-                tahmin = set(strateji_tahmin_uret(simulasyon_verisi, s))
+            for s in stratejiler_v2:
+                tahmin = set(strateji_tahmin_uret_v2(simulasyon_verisi, s))
                 hits = len(tahmin & gercek_sonuc)
                 perf_sonuclari.append({"Strateji": s, "Isabet": hits, "Tahmin": sorted(list(tahmin))})
             
@@ -434,57 +373,45 @@ else:
                     hit_txt = ", ".join(map(str, hit_nums)) if hit_nums else "Yok"
                     st.markdown(f"**{row['Strateji']}:** {row['Isabet']} İsabet → `{hit_txt}`")
 
-            # --- 📜 Gelişmiş Tarihsel Otonom Log Günlüğü ---
             st.markdown("---")
-            st.subheader("📜 Otonom Tahmin Logları ve Kümülatif Başarı İstatistikleri")
-            st.write("Sistem, geçmiş çekilişlerin oynandığı anlara rolling-backtest ile geri dönerek otonom bir tahmin günlüğü (log) derler.")
-            
-            log_derinligi = st.slider("Log İstatistik Derinliği (Son Kaç Çekiliş Günlüğü İncelensin?)", min_value=3, max_value=12, value=6)
+            st.subheader("📜 Yeni Nesil Otonom Tahmin Log Günlüğü (Rolling Backtest)")
+            log_derinligi = st.slider("Log İstatistik Derinliği (Çekiliş Sayısı)", min_value=3, max_value=12, value=6)
             
             @st.cache_data(ttl=60)
-            def cached_tarihsel_log_ureticisi(_df, _stratejiler):
+            def cached_tarihsel_log_v2(_df, _stratejiler):
                 log_verisi = []
                 for i in range(log_derinligi, 0, -1):
                     if i < len(_df):
                         target_row = _df.iloc[i-1]
-                        target_no = str(target_row['CekilisNo'])
                         target_nums = set(target_row[sayi_kolonlari].values.astype(int))
                         tarihsel_slice = _df.iloc[i:]
-                        
                         for s in _stratejiler:
-                            tahmin_nums = set(strateji_tahmin_uret(tarihsel_slice, s))
-                            isabet = len(tahmin_nums & target_nums)
-                            log_verisi.append({
-                                "Çekiliş No": target_no,
-                                "Strateji": s,
-                                "İsabet": isabet
-                            })
+                            t_nums = set(strateji_tahmin_uret_v2(tarihsel_slice, s))
+                            log_verisi.append({"Çekiliş No": str(target_row['CekilisNo']), "Strateji": s, "İsabet": len(t_nums & target_nums)})
                 return pd.DataFrame(log_verisi)
                 
-            df_log_hist = cached_tarihsel_log_ureticisi(df, stratejiler)
+            df_log_hist = cached_tarihsel_log_v2(df, stratejiler_v2)
             
             if not df_log_hist.empty:
-                col_g1, col_g2 = st.columns([1, 1])
+                col_g1, col_g2 = st.columns(2)
                 with col_g1:
-                    st.write("📈 **Stratejilerin Log Başarı Ortalamaları:**")
+                    st.write("📈 **Yeni Nesil Ortalama Başarı Puanları:**")
                     df_ozet = df_log_hist.groupby("Strateji")["İsabet"].mean().reset_index().sort_values(by="İsabet", ascending=False)
-                    df_ozet.columns = ["Strateji", "Tarihsel Ortalama İsabet"]
+                    df_ozet.columns = ["Strateji", "Tarihsel Log Başarı Ortalaması"]
                     st.dataframe(df_ozet, use_container_width=True)
                 with col_g2:
-                    fig_trend = px.line(df_log_hist, x="Çekiliş No", y="İsabet", color="Strateji", title="Log Zaman Çizelgesi Başarı Trendi")
+                    fig_trend = px.line(df_log_hist, x="Çekiliş No", y="İsabet", color="Strateji", title="Yeni Nesil Başarı Trend Çizelgesi")
                     st.plotly_chart(fig_trend, use_container_width=True)
-                    
-                st.write("📋 **Detaylı Otonom Log Matrisi (Hangi Çekilişte Kaç Geldi?):**")
+                
                 df_pivot = df_log_hist.pivot(index="Çekiliş No", columns="Strateji", values="İsabet").sort_index(ascending=False)
                 st.dataframe(df_pivot, use_container_width=True)
 
-            # --- Canlı Gelecek Tahmini Gösterimi ---
             st.markdown("---")
-            gelecek_cekilis_no = int(df.iloc[0]['CekilisNo']) + 1
-            st.subheader(f"🔮 Bir Sonraki Çekiliş İçin Canlı Kuantum Tahminler (🎯 Hedef Çekiliş No: {gelecek_cekilis_no})")
-            st.write(f"Sistem elindeki tüm canlı veriyi tarayarak **{gelecek_cekilis_no}** numaralı gelecek tur için 20'lik ideal portföyleri derledi:")
+            gelecek_no = int(df.iloc[0]['CekilisNo']) + 1
+            st.subheader(f"🔮 Bir Sonraki Çekiliş İçin Canlı Kuantum Tahminler (🎯 Hedef Çekiliş No: {gelecek_no})")
+            st.write(f"Sistem, **{gelecek_no}** numaralı gelecek tur için 10 yeni nesil kuantum portföyünü üretti:")
             
-            for s in stratejiler:
-                t = strateji_tahmin_uret(df, s)
+            for s in stratejiler_v2:
+                t = strateji_tahmin_uret_v2(df, s)
                 t_html = " ".join([f"<span style='display:inline-block; background-color:#2E7D32; color:white; border-radius:4px; padding:2px 6px; margin:2px; font-size:12px;'>{n}</span>" for n in t])
-                st.markdown(f"**{s} Stratejisi Tahmini:**<br>{t_html}", unsafe_allow_html=True)
+                st.markdown(f"**{s} Tahmini:**<br>{t_html}", unsafe_allow_html=True)
