@@ -214,15 +214,54 @@ else:
         fig_markov.update_layout(xaxis=dict(type='category'))
         st.plotly_chart(fig_markov, use_container_width=True)
 
-    # --- TAB 5 ---
+    # --- TAB 5 (AKILLI KUPON MOTORU VE YENİ KESİŞİM LABORATUVARI) ---
     with tab5:
-        st.subheader("🧙‍♂️ İleri Düzey Bağımsız Filtreli Kupon Jeneratörü")
+        # 🔥 --- YENİ EKLENTİ: HAVUZ KESİŞİM LABORATUVARI ---
+        st.markdown("### 🧬 Strateji Havuz Kesişim Laboratuvarı (Ortak Sayı Bulucu)")
+        st.write("İki farklı strateji havuzunun kesiştiği (çakışan) tüm sayıları adet sınırı olmadan listeler. Bu sayıları elinle seçip kuponlarında kullanabilirsin.")
+        
+        col_h1, col_h2 = st.columns(2)
+        with col_h1:
+            havuz1_secim = st.selectbox("1. Strateji Havuzu Seçin:", ["🔥 Sıcak Sayılar Havuzu (İlk 30)", "❄️ Derin Gecikme Havuzu (İlk 30)", "📈 MACD İvme Havuzu (İlk 30)", "⚖️ Varyans Gerilim Havuzu (İlk 30)", "⛓️ Markov Yoğunluklu Karma (İlk 30)"], index=2, key="h1_key")
+        with col_h2:
+            havuz2_secim = st.selectbox("2. Strateji Havuzu Seçin:", ["🔥 Sıcak Sayılar Havuzu (İlk 30)", "❄️ Derin Gecikme Havuzu (İlk 30)", "📈 MACD İvme Havuzu (İlk 30)", "⚖️ Varyans Gerilim Havuzu (İlk 30)", "⛓️ Markov Yoğunluklu Karma (İlk 30)"], index=0, key="h2_key")
+            
+        def get_static_pool(secim, _freq, _df_gecikme, _df_mv, _markov_matrisi, _df, _sayi_kolonlari):
+            if "Sıcak" in secim:
+                return _freq.sort_values(ascending=False).index.tolist()[:30]
+            elif "Gecikme" in secim:
+                return _df_gecikme.head(30).index.tolist()
+            elif "MACD" in secim:
+                return _df_mv.sort_values(by="MACD_Skoru", ascending=False)["Sayı"].tolist()[:30]
+            elif "Varyans" in secim:
+                return _df_mv.sort_values(by="Varyans_Gerilimi", ascending=False)["Sayı"].tolist()[:30]
+            elif "Markov" in secim:
+                son_cekilis_sayilari = _df.iloc[0][_sayi_kolonlari].values.astype(int)
+                toplam_olasiliklar = np.zeros(80)
+                for num in son_cekilis_sayilari:
+                    toplam_olasiliklar += _markov_matrisi[num - 1]
+                return (np.argsort(toplam_olasiliklar)[::-1] + 1).tolist()[:30]
+            return []
+
+        h1_list = get_static_pool(havuz1_secim, frekanslar, df_gecikme, df_mv, markov_matrisi, df, sayi_kolonlari)
+        h2_list = get_static_pool(havuz2_secim, frekanslar, df_gecikme, df_mv, markov_matrisi, df, sayi_kolonlari)
+        
+        ortak_sayilar = sorted(list(set(h1_list) & set(h2_list)))
+        
+        if ortak_sayilar:
+            ortak_html = " ".join([f"<span style='display:inline-block; background-color:#E65100; color:white; border-radius:50%; width:36px; height:36px; text-align:center; line-height:36px; font-weight:bold; font-size:14px; margin:3px;'>{num}</span>" for num in ortak_sayilar])
+            st.markdown(f"🎯 **Seçilen İki Havuzda da Ortak Olan Sayılar ({len(ortak_sayilar)} Adet):**<br>{ortak_html}", unsafe_allow_html=True)
+        else:
+            st.info("Bu iki havuzun çakışan ortak bir sayısı bulunamadı.")
+            
+        st.markdown("---")
+        st.markdown("### 🧙‍♂️ Otomatik Filtreli Kupon Jeneratörü")
+        
         adet_kupon = st.slider("Kaç Sıra Kupon Üretilsin?", min_value=1, max_value=5, value=3)
         kupon_ayarlari = []
         
-        st.markdown("---")
         for k in range(1, adet_kupon + 1):
-            with st.expander(f"⚙️ Kupon Sıra {k} Özel Ayarları", expanded=True):
+            with st.expander(f"⚙️ Kupon Sıra {k} Özel Ayarları", expanded=False):
                 col_sayi, col_filtre = st.columns([1, 2])
                 with col_sayi:
                     s_adedi = st.slider(f"Kupon {k} Kaç Sayıdan Oluşsun?", min_value=1, max_value=10, value=10, key=f"sayi_{k}")
@@ -244,7 +283,6 @@ else:
                     )
                 kupon_ayarlari.append({"sıra": k, "sayi_adedi": s_adedi, "filtreler": filtreler})
         
-        st.markdown("---")
         if st.button("🎰 Tüm Kuponları Kendi Kriterleriyle Süz ve Üret"):
             with st.spinner("🔮 Kuantum süzgeçler hesaplanıyor..."):
                 st.markdown(f"### 🎫 Süzülmüş Özel Kupon Portföyünüz:")
@@ -350,14 +388,13 @@ else:
             for n in son_n: probs += markov_matrisi[n-1]
             havuz = list(set((np.argsort(probs)[::-1] + 1).tolist()[:20]) | set(freq_slice.sort_values(ascending=False).index[:20]))
         elif strateji_adi == "🌪️ Kaotik Seçim (Varyans + Markov)":
-            # Hata veren 'markov_matris' ismi burada 'markov_matrisi' olarak tamamen zırhlandırıldı:
             havuz = list(set(mv_slice.sort_values(by="Varyans_Gerilimi", ascending=False)["Sayı"].tolist()[:20]) | set((np.argsort(np.sum(markov_matrisi, axis=0))[::-1] + 1).tolist()[:20]))
         else:
             havuz = np.random.choice(range(1,81), 40, replace=False).tolist()
             
         return sorted(np.random.choice(havuz, 20, replace=False).tolist())
 
-    # --- TAB 7 (STRATEJİ PERFORMANS SİMÜLATÖRÜ) ---
+    # --- TAB 7 (STRATEJİ PERFORMANS SİMÜLATÖRÜ VE LOG KAYITLARI) ---
     with tab7:
         st.subheader("🏆 Strateji Performans Ölçümü (Backtest Mode)")
         st.write("Sistem, son gerçekleşen çekilişi 'gelecek' sayıp, önceki verilerle 10 stratejiyi yarıştırır.")
@@ -397,7 +434,7 @@ else:
                     hit_txt = ", ".join(map(str, hit_nums)) if hit_nums else "Yok"
                     st.markdown(f"**{row['Strateji']}:** {row['Isabet']} İsabet → `{hit_txt}`")
 
-            # --- 📜 Gelişmiş Tarihsel Otonom Log Günlüğü (YENİ ÖZELLİK) ---
+            # --- 📜 Gelişmiş Tarihsel Otonom Log Günlüğü ---
             st.markdown("---")
             st.subheader("📜 Otonom Tahmin Logları ve Kümülatif Başarı İstatistikleri")
             st.write("Sistem, geçmiş çekilişlerin oynandığı anlara rolling-backtest ile geri dönerek otonom bir tahmin günlüğü (log) derler.")
