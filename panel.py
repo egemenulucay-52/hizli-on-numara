@@ -350,13 +350,13 @@ else:
             for n in son_n: probs += markov_matrisi[n-1]
             havuz = list(set((np.argsort(probs)[::-1] + 1).tolist()[:20]) | set(freq_slice.sort_values(ascending=False).index[:20]))
         elif strateji_adi == "🌪️ Kaotik Seçim (Varyans + Markov)":
-            havuz = list(set(mv_slice.sort_values(by="Varyans_Gerilimi", ascending=False)["Sayı"].tolist()[:20]) | set((np.argsort(np.sum(markov_matris, axis=0))[::-1] + 1).tolist()[:20]))
+            havuz = list(set(mv_slice.sort_values(by="Varyans_Gerilimi", ascending=False)["Sayı"].tolist()[:20]) | set((np.argsort(np.sum(markov_matrisi, axis=0))[::-1] + 1).tolist()[:20]))
         else:
             havuz = np.random.choice(range(1,81), 40, replace=False).tolist()
             
         return sorted(np.random.choice(havuz, 20, replace=False).tolist())
 
-    # --- TAB 7 (YENİ PERFORMANS SİMÜLATÖRÜ) ---
+    # --- TAB 7 (STRATEJİ PERFORMANS SİMÜLATÖRÜ) ---
     with tab7:
         st.subheader("🏆 Strateji Performans Ölçümü (Backtest Mode)")
         st.write("Sistem, son gerçekleşen çekilişi 'gelecek' sayıp, önceki verilerle 10 stratejiyi yarıştırır.")
