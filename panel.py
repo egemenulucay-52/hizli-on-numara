@@ -350,6 +350,7 @@ else:
             for n in son_n: probs += markov_matrisi[n-1]
             havuz = list(set((np.argsort(probs)[::-1] + 1).tolist()[:20]) | set(freq_slice.sort_values(ascending=False).index[:20]))
         elif strateji_adi == "🌪️ Kaotik Seçim (Varyans + Markov)":
+            # Hata veren 'markov_matris' ismi burada 'markov_matrisi' olarak tamamen zırhlandırıldı:
             havuz = list(set(mv_slice.sort_values(by="Varyans_Gerilimi", ascending=False)["Sayı"].tolist()[:20]) | set((np.argsort(np.sum(markov_matrisi, axis=0))[::-1] + 1).tolist()[:20]))
         else:
             havuz = np.random.choice(range(1,81), 40, replace=False).tolist()
@@ -361,16 +362,16 @@ else:
         st.subheader("🏆 Strateji Performans Ölçümü (Backtest Mode)")
         st.write("Sistem, son gerçekleşen çekilişi 'gelecek' sayıp, önceki verilerle 10 stratejiyi yarıştırır.")
         
+        stratejiler = [
+            "🔥 Sadece Sıcak", "❄️ Sadece Soğuk", "🚀 Trend Takipçi (MACD)", 
+            "💥 Patlama Adayları (Varyans)", "⛓️ Zincir Reaksiyonu (Markov)", 
+            "💎 Kuantum Hibrit (MACD + Varyans)", "⚖️ Dengeleyici (Sıcak + Soğuk)", 
+            "⚡ Hızlı Tetik (Markov + Sıcak)", "🌪️ Kaotik Seçim (Varyans + Markov)", "🎰 Saf Olasılık (Random)"
+        ]
+
         if len(df) > 10:
             gercek_sonuc = set(df.iloc[0][sayi_kolonlari].values.astype(int))
             simulasyon_verisi = df.iloc[1:]
-            
-            stratejiler = [
-                "🔥 Sadece Sıcak", "❄️ Sadece Soğuk", "🚀 Trend Takipçi (MACD)", 
-                "💥 Patlama Adayları (Varyans)", "⛓️ Zincir Reaksiyonu (Markov)", 
-                "💎 Kuantum Hibrit (MACD + Varyans)", "⚖️ Dengeleyici (Sıcak + Soğuk)", 
-                "⚡ Hızlı Tetik (Markov + Sıcak)", "🌪️ Kaotik Seçim (Varyans + Markov)", "🎰 Saf Olasılık (Random)"
-            ]
             
             perf_sonuclari = []
             for s in stratejiler:
@@ -396,11 +397,57 @@ else:
                     hit_txt = ", ".join(map(str, hit_nums)) if hit_nums else "Yok"
                     st.markdown(f"**{row['Strateji']}:** {row['Isabet']} İsabet → `{hit_txt}`")
 
+            # --- 📜 Gelişmiş Tarihsel Otonom Log Günlüğü (YENİ ÖZELLİK) ---
             st.markdown("---")
-            st.subheader("🔮 Bir Sonraki Çekiliş İçin Canlı Tahminler (Next Round)")
-            st.write("Henüz gerçekleşmemiş çekiliş için 20'lik kuantum tahmin listeleri:")
+            st.subheader("📜 Otonom Tahmin Logları ve Kümülatif Başarı İstatistikleri")
+            st.write("Sistem, geçmiş çekilişlerin oynandığı anlara rolling-backtest ile geri dönerek otonom bir tahmin günlüğü (log) derler.")
+            
+            log_derinligi = st.slider("Log İstatistik Derinliği (Son Kaç Çekiliş Günlüğü İncelensin?)", min_value=3, max_value=12, value=6)
+            
+            @st.cache_data(ttl=60)
+            def cached_tarihsel_log_ureticisi(_df, _stratejiler):
+                log_verisi = []
+                for i in range(log_derinligi, 0, -1):
+                    if i < len(_df):
+                        target_row = _df.iloc[i-1]
+                        target_no = str(target_row['CekilisNo'])
+                        target_nums = set(target_row[sayi_kolonlari].values.astype(int))
+                        tarihsel_slice = _df.iloc[i:]
+                        
+                        for s in _stratejiler:
+                            tahmin_nums = set(strateji_tahmin_uret(tarihsel_slice, s))
+                            isabet = len(tahmin_nums & target_nums)
+                            log_verisi.append({
+                                "Çekiliş No": target_no,
+                                "Strateji": s,
+                                "İsabet": isabet
+                            })
+                return pd.DataFrame(log_verisi)
+                
+            df_log_hist = cached_tarihsel_log_ureticisi(df, stratejiler)
+            
+            if not df_log_hist.empty:
+                col_g1, col_g2 = st.columns([1, 1])
+                with col_g1:
+                    st.write("📈 **Stratejilerin Log Başarı Ortalamaları:**")
+                    df_ozet = df_log_hist.groupby("Strateji")["İsabet"].mean().reset_index().sort_values(by="İsabet", ascending=False)
+                    df_ozet.columns = ["Strateji", "Tarihsel Ortalama İsabet"]
+                    st.dataframe(df_ozet, use_container_width=True)
+                with col_g2:
+                    fig_trend = px.line(df_log_hist, x="Çekiliş No", y="İsabet", color="Strateji", title="Log Zaman Çizelgesi Başarı Trendi")
+                    st.plotly_chart(fig_trend, use_container_width=True)
+                    
+                st.write("📋 **Detaylı Otonom Log Matrisi (Hangi Çekilişte Kaç Geldi?):**")
+                df_pivot = df_log_hist.pivot(index="Çekiliş No", columns="Strateji", values="İsabet").sort_index(ascending=False)
+                st.dataframe(df_pivot, use_container_width=True)
+
+            # --- Canlı Gelecek Tahmini Gösterimi ---
+            st.markdown("---")
+            gelecek_cekilis_no = int(df.iloc[0]['CekilisNo']) + 1
+            st.subheader(f"🔮 Bir Sonraki Çekiliş İçin Canlı Kuantum Tahminler (🎯 Hedef Çekiliş No: {gelecek_cekilis_no})")
+            st.write(f"Sistem elindeki tüm canlı veriyi tarayarak **{gelecek_cekilis_no}** numaralı gelecek tur için 20'lik ideal portföyleri derledi:")
             
             for s in stratejiler:
                 t = strateji_tahmin_uret(df, s)
                 t_html = " ".join([f"<span style='display:inline-block; background-color:#2E7D32; color:white; border-radius:4px; padding:2px 6px; margin:2px; font-size:12px;'>{n}</span>" for n in t])
-                st.markdown(f"**{s}:**<br>{t_html}", unsafe_allow_html=True)
+                st.markdown(f"**{s} Stratejisi Tahmini:**<br>{t_html}", unsafe_allow_html=True)
