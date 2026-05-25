@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import os
+import itertools
+from collections import Counter
 from datetime import datetime
 
 CSV_DOSYASI = "hizli_on_numara.csv"
@@ -49,12 +51,34 @@ def grup_analizini_calistir():
         basamak_rapor.append({"Son Basamak": f"Sonu {b} Olanlar", "Son 5 Ort": round(s5_b_adet, 2), "Son 20 Ort": round(s20_b_adet, 2), "İvme": ivme})
     df_basamak = pd.DataFrame(basamak_rapor).sort_values(by="Son 5 Ort", ascending=False)
 
-    # --- 3. MODEL: İKİLİ ÇETELER VE GRUP MACD MOMENTUM HESABI (YENİ SİLAH) ---
-    # Potansiyel güçlü adayları belirlemek için önce geniş kapsamlı (son 150 tur) çift haritası çıkarıyoruz
+    # --- 3. MODEL: MAKRO KAÇLI KOMBİNASYONDA ORTAK ÇIKTILAR? (YENİ İSTEDİĞİN CANAVAR) ---
     df_len = len(df)
-    short_horizon = min(15, df_len)
     long_horizon = min(150, df_len)
+    draws_150 = df.head(long_horizon)[sayi_kolonlari].values.astype(int)
     
+    k_summary = []
+    for k in [2, 3, 4, 5, 6]:
+        combo_counts = Counter()
+        for row in draws_150:
+            combos = itertools.combinations(sorted(row), k)
+            combo_counts.update(combos)
+            
+        total_unique = len(combo_counts)
+        repeated_2_plus = sum(1 for c, count in combo_counts.items() if count >= 2)
+        repeated_3_plus = sum(1 for c, count in combo_counts.items() if count >= 3)
+        max_repeat = max(combo_counts.values()) if combo_counts else 0
+        
+        k_summary.append({
+            "Grup Tipi": f"{k}'lı Ortak Gruplar",
+            "En Az 1 Kez Çıkan (Benzersiz)": total_unique,
+            "En Az 2 Kez Çıkan (Tekrarlayan)": repeated_2_plus,
+            "En Az 3 Kez Çıkan": repeated_3_plus,
+            "Maksimum Tekrar": max_repeat
+        })
+    df_k_summary = pd.DataFrame(k_summary)
+
+    # --- 4. MODEL: İKİLİ ÇETELER KOMBİNASYONEL MACD İVME TABLOSU ---
+    short_horizon = min(15, df_len)
     def cete_frekansi_hesapla(data_slice):
         counts = {}
         for _, row in data_slice[sayi_kolonlari].iterrows():
@@ -66,27 +90,20 @@ def grup_analizini_calistir():
 
     counts_total = cete_frekansi_hesapla(df.head(long_horizon))
     counts_short = cete_frekansi_hesapla(df.head(short_horizon))
-    
-    # En az 4 kez beraber çıkmış popüler ikilileri süzüyoruz ki gürültü (noise) elensin
     populer_ikililer = [pair for pair, count in counts_total.items() if count >= 4]
     
     cete_macd_rapor = []
     for pair in populer_ikililer:
-        # Kısa ve uzun vadeli normalize edilmiş frekanslar
         f_short = counts_short.get(pair, 0) / short_horizon
         f_long = counts_total.get(pair, 0) / long_horizon
-        
         grup_macd = f_short - f_long
-        toplam_birliktelik = counts_total.get(pair, 0)
-        
         cete_macd_rapor.append({
             "Grup": f"[{pair[0]} - {pair[1]}]",
             "Son 15 Ort": round(f_short, 3),
             "Son 150 Ort": round(f_long, 3),
             "Grup_MACD": round(grup_macd, 4),
-            "Toplam_Hit": toplam_birliktelik
+            "Toplam_Hit": counts_total.get(pair, 0)
         })
-        
     df_cete_macd = pd.DataFrame(cete_macd_rapor).sort_values(by="Grup_MACD", ascending=False).head(15)
 
     # --- CSV OLARAK YEDEKLE ---
@@ -100,8 +117,6 @@ def grup_analizini_calistir():
 ---
 
 ### 🧱 1. Onluk Blok Dağılım Matrisi
-*Teorik Denge Sınırı: Tur başına **2.50** adettir. Kurak olan bloklar patlamaya en yakın alanlardır.*
-
 | Onluk Bölge | Son 5 Tur Ortalaması | Son 20 Tur Ortalaması | Kuantum Durum |
 | :--- | :---: | :---: | :--- |
 """
@@ -112,8 +127,6 @@ def grup_analizini_calistir():
 ---
 
 ### 🔢 2. Son Basamak (Ending Digits) Grup Kümelenmesi
-*Sayıların son hanelerine göre çekilme yoğunluğu (En popülerden en uyuza doğru sıralı).*
-
 | Sayı Grubu Kökü | Son 5 Tur Ort | Son 20 Tur Ort | Trend İvmesi |
 | :--- | :---: | :---: | :--- |
 """
@@ -123,14 +136,23 @@ def grup_analizini_calistir():
     md_content += """
 ---
 
-### 🕸️ 3. İkili Sayı Grupları (Çeteler) Kombinasyonel MACD İvme Tablosu
-*Sayı gruplarının kısa vadeli (15 tur) momentumu ile makro (150 tur) trendi arasındaki farktır. Skoru **en yüksek** olan gruplar eş zamanlı yükseliş ivmesindedir ve rötara karşı en dayanıklı ortak takımlardır.*
+### 📐 3. Makro Kombinasyonel Kümelenme Dağılım Matrisi (Son 150 Çekiliş)
+*Sayı gruplarının detayına inmeden önce, çekilen 20 sayı içinden kaçarlı ortak grupların doğduğunu ve bunların tekrarlanma istatistiklerini veren makro tablodur.*
 
+| Ortaklık Tipi | En Az 1 Kez Çıkan (Benzersiz) | En Az 2 Kez Çıkan (Tekrarlayan) | En Az 3 Kez Çıkan | Tarihsel En Yüksek Tekrar |
+| :--- | :---: | :---: | :---: | :---: |
+"""
+    for _, r in df_k_summary.iterrows():
+        md_content += f"| **{r['Grup Tipi']}** | {r['En Az 1 Kez Çıkan (Benzersiz)']} | {r['En Az 2 Kez Çıkan (Tekrarlayan)']} | {r['En Az 3 Kez Çıkan']} | **{r['Maksimum Tekrar']} Kez** |\n"
+
+    md_content += """
+---
+
+### 🕸 * 4. İkili Sayı Grupları (Çeteler) Kombinasyonel MACD İvme Tablosu
 | İkili Sayı Grubu | Son 15 Tur Ort (Kısa) | Son 150 Tur Ort (Uzun) | Grup MACD Skoru | Toplam Beraber Çıkma |
 | :--- | :---: | :---: | :---: | :---: |
 """
     for _, r in df_cete_macd.iterrows():
-        # Skorun gücüne göre görsel emoji desteği ekledik
         emoji = "🚀 Şiddetli" if r['Grup_MACD'] > 0.05 else ("📈 Pozitif" if r['Grup_MACD'] > 0 else "📉 Zayıf")
         md_content += f"| `{r['Grup']}` | {r['Son 15 Ort']} | {r['Son 150 Ort']} | **{r['Grup_MACD']}** ({emoji}) | {r['Toplam_Hit']} Kez |\n"
 
@@ -138,7 +160,7 @@ def grup_analizini_calistir():
 
     with open(RAPOR_MD, "w", encoding="utf-8") as f:
         f.write(md_content)
-    print("🚀 Grup MACD entegreli GitHub Raporu başarıyla basıldı!")
+    print("🚀 Kombinasyon matrisi entegreli yeni GitHub Raporu başarıyla basıldı!")
 
 if __name__ == "__main__":
     grup_analizini_calistir()
