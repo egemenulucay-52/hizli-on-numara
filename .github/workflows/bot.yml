@@ -26,6 +26,9 @@ jobs:
     - name: Botu Çalistir (Veri Cek)
       run: python veri_cekici.py
 
+    - name: Isik Hizinda Grup Analiz Raporu Uret
+      run: python grup_analizi.py
+
     - name: Yeni Verileri GitHub'a Geri Kaydet
       run: |
         git config --global user.name 'Veri Botu'
