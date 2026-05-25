@@ -1,11 +1,11 @@
 # 📊 Hızlı On Numara Kuantum Grup Raporu
-> **Son Güncellenme:** 2026-05-25 15:54:26 (TR)  
+> **Son Güncellenme:** 2026-05-25 16:03:19 (TR)  
 > **Analiz Edilen Son Çekiliş No:** `31403` | **Tarih:** `2026-05-25 15:54:09`
 
 ---
 
 ### 🧱 1. Onluk Blok Dağılım Matrisi
-*Teorik Denge Sınırı: Tur başına **2.50** adettir. Kurak olan bloklar geometrik olarak patlamaya en yakın alanlardır.*
+*Teorik Denge Sınırı: Tur başına **2.50** adettir. Kurak olan bloklar patlamaya en yakın alanlardır.*
 
 | Onluk Bölge | Son 5 Tur Ortalaması | Son 20 Tur Ortalaması | Kuantum Durum |
 | :--- | :---: | :---: | :--- |
@@ -38,21 +38,26 @@
 
 ---
 
-### 🕸️ 3. Son 50 Çekilişin En Sadık İkili Sayı Grupları (Çeteler)
-*Birbirini en çok tetikleyen ve slottan beraber ayrılmayan kilit mikroskobik kombinasyonlar.*
+### 🕸️ 3. İkili Sayı Grupları (Çeteler) Kombinasyonel MACD İvme Tablosu
+*Sayı gruplarının kısa vadeli (15 tur) momentumu ile makro (150 tur) trendi arasındaki farktır. Skoru **en yüksek** olan gruplar eş zamanlı yükseliş ivmesindedir ve rötara karşı en dayanıklı ortak takımlardır.*
 
-| İkili Sayı Grubu | Son 50 Turda Beraber Görülme Sıklığı |
-| :--- | :---: |
-| `[22 - 29]` | **10 Kez** |
-| `[65 - 74]` | **10 Kez** |
-| `[17 - 73]` | **9 Kez** |
-| `[2 - 65]` | **9 Kez** |
-| `[22 - 36]` | **9 Kez** |
-| `[74 - 77]` | **9 Kez** |
-| `[7 - 35]` | **8 Kez** |
-| `[8 - 65]` | **8 Kez** |
-| `[36 - 73]` | **8 Kez** |
-| `[65 - 77]` | **8 Kez** |
+| İkili Sayı Grubu | Son 15 Tur Ort (Kısa) | Son 150 Tur Ort (Uzun) | Grup MACD Skoru | Toplam Beraber Çıkma |
+| :--- | :---: | :---: | :---: | :---: |
+| `[67 - 74]` | 0.333 | 0.067 | **0.2667** (🚀 Şiddetli) | 10 Kez |
+| `[4 - 21]` | 0.267 | 0.047 | **0.22** (🚀 Şiddetli) | 7 Kez |
+| `[19 - 38]` | 0.267 | 0.053 | **0.2133** (🚀 Şiddetli) | 8 Kez |
+| `[59 - 79]` | 0.267 | 0.053 | **0.2133** (🚀 Şiddetli) | 8 Kez |
+| `[64 - 74]` | 0.267 | 0.053 | **0.2133** (🚀 Şiddetli) | 8 Kez |
+| `[4 - 79]` | 0.267 | 0.06 | **0.2067** (🚀 Şiddetli) | 9 Kez |
+| `[59 - 64]` | 0.267 | 0.067 | **0.2** (🚀 Şiddetli) | 10 Kez |
+| `[11 - 61]` | 0.267 | 0.067 | **0.2** (🚀 Şiddetli) | 10 Kez |
+| `[3 - 59]` | 0.267 | 0.067 | **0.2** (🚀 Şiddetli) | 10 Kez |
+| `[22 - 67]` | 0.267 | 0.067 | **0.2** (🚀 Şiddetli) | 10 Kez |
+| `[22 - 79]` | 0.267 | 0.067 | **0.2** (🚀 Şiddetli) | 10 Kez |
+| `[70 - 79]` | 0.267 | 0.067 | **0.2** (🚀 Şiddetli) | 10 Kez |
+| `[43 - 67]` | 0.267 | 0.073 | **0.1933** (🚀 Şiddetli) | 11 Kez |
+| `[62 - 79]` | 0.267 | 0.073 | **0.1933** (🚀 Şiddetli) | 11 Kez |
+| `[35 - 61]` | 0.267 | 0.073 | **0.1933** (🚀 Şiddetli) | 11 Kez |
 
 
 _Bu rapor otonom işçi tarafından her 10 dakikada bir sıfır gecikmeyle üretilir._
