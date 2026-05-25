@@ -1,6 +1,6 @@
 # 📊 Hızlı On Numara Kuantum Grup Raporu
-> **Son Güncellenme:** 2026-05-25 15:14:28 (TR)  
-> **Analiz Edilen Son Çekiliş No:** `31396` | **Tarih:** `2026-05-25 15:14:11`
+> **Son Güncellenme:** 2026-05-25 15:24:31 (TR)  
+> **Analiz Edilen Son Çekiliş No:** `31398` | **Tarih:** `2026-05-25 15:24:15`
 
 ---
 
@@ -9,14 +9,14 @@
 
 | Onluk Bölge | Son 5 Tur Ortalaması | Son 20 Tur Ortalaması | Kuantum Durum |
 | :--- | :---: | :---: | :--- |
-| **1_10** | 2.0 | 2.8 | ❄️ KURAK (Aday) |
-| **11_20** | 2.6 | 2.55 | ⚖️ DENGELİ |
-| **21_30** | 2.4 | 2.15 | ⚖️ DENGELİ |
-| **31_40** | 2.0 | 2.15 | ❄️ KURAK (Aday) |
-| **41_50** | 2.8 | 2.0 | ⚖️ DENGELİ |
-| **51_60** | 2.4 | 2.9 | ⚖️ DENGELİ |
-| **61_70** | 2.8 | 2.4 | ⚖️ DENGELİ |
-| **71_80** | 3.0 | 3.05 | 🔥 YOĞUN |
+| **1_10** | 2.0 | 2.6 | ❄️ KURAK (Aday) |
+| **11_20** | 3.2 | 2.7 | 🔥 YOĞUN |
+| **21_30** | 3.0 | 2.2 | 🔥 YOĞUN |
+| **31_40** | 2.0 | 2.05 | ❄️ KURAK (Aday) |
+| **41_50** | 2.4 | 2.15 | ⚖️ DENGELİ |
+| **51_60** | 2.0 | 2.75 | ❄️ KURAK (Aday) |
+| **61_70** | 3.2 | 2.5 | 🔥 YOĞUN |
+| **71_80** | 2.2 | 3.05 | ⚖️ DENGELİ |
 
 ---
 
@@ -25,16 +25,16 @@
 
 | Sayı Grubu Kökü | Son 5 Tur Ort | Son 20 Tur Ort | Trend İvmesi |
 | :--- | :---: | :---: | :--- |
-| Sonu 7 Olanlar | 3.2 | 2.9 | 📈 Yükselişte |
-| Sonu 9 Olanlar | 2.6 | 1.8 | 📈 Yükselişte |
+| Sonu 9 Olanlar | 3.0 | 1.9 | 📈 Yükselişte |
 | Sonu 8 Olanlar | 2.4 | 1.7 | 📈 Yükselişte |
-| Sonu 1 Olanlar | 2.2 | 2.2 | 📉 Düşüşte |
 | Sonu 4 Olanlar | 2.2 | 1.95 | 📈 Yükselişte |
-| Sonu 2 Olanlar | 2.0 | 2.15 | 📉 Düşüşte |
-| Sonu 5 Olanlar | 2.0 | 2.2 | 📉 Düşüşte |
-| Sonu 6 Olanlar | 1.4 | 1.7 | 📉 Düşüşte |
+| Sonu 1 Olanlar | 2.0 | 2.2 | 📉 Düşüşte |
+| Sonu 7 Olanlar | 2.0 | 2.7 | 📉 Düşüşte |
+| Sonu 2 Olanlar | 2.0 | 2.1 | 📉 Düşüşte |
+| Sonu 6 Olanlar | 2.0 | 1.95 | 📈 Yükselişte |
+| Sonu 5 Olanlar | 1.8 | 2.05 | 📉 Düşüşte |
+| Sonu 3 Olanlar | 1.4 | 1.95 | 📉 Düşüşte |
 | Sonu 0 Olanlar | 1.2 | 1.5 | 📉 Düşüşte |
-| Sonu 3 Olanlar | 0.8 | 1.9 | 📉 Düşüşte |
 
 ---
 
@@ -44,15 +44,15 @@
 | İkili Sayı Grubu | Son 50 Turda Beraber Görülme Sıklığı |
 | :--- | :---: |
 | `[22 - 36]` | **10 Kez** |
+| `[22 - 29]` | **9 Kez** |
 | `[65 - 74]` | **9 Kez** |
 | `[2 - 66]` | **9 Kez** |
 | `[74 - 77]` | **9 Kez** |
-| `[7 - 72]` | **9 Kez** |
 | `[16 - 36]` | **9 Kez** |
 | `[2 - 65]` | **9 Kez** |
-| `[5 - 63]` | **9 Kez** |
-| `[57 - 59]` | **8 Kez** |
-| `[57 - 65]` | **8 Kez** |
+| `[16 - 22]` | **8 Kez** |
+| `[8 - 22]` | **8 Kez** |
+| `[8 - 59]` | **8 Kez** |
 
 
 _Bu rapor otonom işçi tarafından her 10 dakikada bir sıfır gecikmeyle üretilir._
