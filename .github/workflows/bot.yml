@@ -31,7 +31,10 @@ jobs:
 
     - name: Yeni Verileri GitHub'a Geri Kaydet
       run: |
-        git config --global user.name 'Veri Botu'
-        git config --global user.email 'bot@github.com'
-        git add hizli_on_numara.csv
-        git diff --quiet && git diff --staged --quiet || (git commit -m "✨ Bot: Yeni çekiliş verileri eklendi" && git push)
+          git config --global user.name 'Veri Botu'
+          git config --global user.email 'bot@veri.com'
+          # Nokta atışı dosya yerine her şeyi (CSV + MD + Yeni ne varsa) sahneye ekle:
+          git add -A
+          # Eğer değişen bir şey yoksa workflow'un çökmemesi için korumalı commit:
+          git diff-index --quiet HEAD || git commit -m "🤖 Bot: Yeni çekiliş verileri ve grup raporu güncellendi"
+          git push origin main
