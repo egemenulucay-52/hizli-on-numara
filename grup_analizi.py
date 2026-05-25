@@ -33,17 +33,14 @@ def grup_analizini_calistir():
     
     blok_rapor = []
     for ad, aralik in bloklar.items():
-        # Son 5 ve son 20 çekilişteki ortalama çıkış miktarı
         s5_adet = df.head(5)[sayi_kolonlari].isin(aralik).sum().sum() / 5
         s20_adet = df.head(20)[sayi_kolonlari].isin(aralik).sum().sum() / 20
-        # Teorik olarak her gruptan tur başına 2.5 sayı düşmeli (20 sayı / 8 blok)
         durum = "🔥 YOĞUN" if s5_adet > 2.8 else ("❄️ KURAK (Aday)" if s5_adet < 2.1 else "⚖️ DENGELİ")
         blok_rapor.append({"Grup": ad.replace("Grup_", ""), "Son 5 Tur Ort": round(s5_adet, 2), "Son 20 Tur Ort": round(s20_adet, 2), "Mevcut Durum": durum})
     df_blok = pd.DataFrame(blok_rapor)
 
     # --- 2. MODEL: SON BASAMAK GRUPLARI (Ending Digits) ---
     basamak_rapor = []
-    # 0'dan 9'a kadar son basamakları tara (Örn: 3 grubu -> 3,13,23,33,43,53,63,73)
     for b in range(10):
         grup_sayilari = [x for x in range(1, 81) if x % 10 == b]
         s5_b_adet = df.head(5)[sayi_kolonlari].isin(grup_sayilari).sum().sum() / 5
@@ -65,10 +62,10 @@ def grup_analizini_calistir():
     cete_rapor = [{"İkili Sayı Grubu": f"[{p[0][0]} - {p[0][1]}]", "Son 50 Turda Beraber Çıkma": p[1]} for p in top_pairs]
     df_cete = pd.DataFrame(cete_rapor)
 
-    # --- CSV OLARAK KAYDET (Hızlı Data İsteyenler İçin) ---
+    # --- CSV OLARAK KAYDET ---
     df_blok.to_csv(RAPOR_CSV, index=False)
     
-    # --- GITHUB İÇİN MAZOTU HAZIRLA: BELEDİYE TİPİ MARKDOWN RAPORU ---
+    # --- GITHUB MARKDOWN RAPORU ---
     md_content = f"""# 📊 Hızlı On Numara Kuantum Grup Raporu
 > **Son Güncellenme:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} (TR)  
 > **Analiz Edilen Son Çekiliş No:** `{son_cekilis_no}` | **Tarih:** `{son_cekilis_tarih}`
@@ -93,7 +90,8 @@ def grup_analizini_calistir():
 | Sayı Grubu Kökü | Son 5 Tur Ort | Son 20 Tur Ort | Trend İvmesi |
 | :--- | :---: | :---: | :--- |
 """
-    for _, r in df_perf = df_basamak.iterrows():
+    # Hataya sebep olan o tehlikeli parça buradan tamamen temizlendi:
+    for _, r in df_basamak.iterrows():
         md_content += f"| {r['Son Basamak']} | {r['Son 5 Ort']} | {r['Son 20 Ort']} | {r['İvme']} |\n"
 
     md_content += """
