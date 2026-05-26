@@ -1,5 +1,5 @@
 # 📊 Hızlı On Numara Kuantum Grup Raporu
-> **Son Güncellenme:** 2026-05-26 19:54:41 (TR)  
+> **Son Güncellenme:** 2026-05-26 20:04:52 (TR)  
 > **Analiz Edilen Son Çekiliş No:** `31668` | **Tarih:** `2026-05-26 19:54:21`
 
 ---
@@ -61,10 +61,10 @@
 | `[10 - 29]` | 0.333 | 0.087 | **0.2467** (🚀 Şiddetli) | 13 Kez |
 | `[8 - 21]` | 0.333 | 0.093 | **0.24** (🚀 Şiddetli) | 14 Kez |
 | `[21 - 22]` | 0.333 | 0.1 | **0.2333** (🚀 Şiddetli) | 15 Kez |
-| `[34 - 65]` | 0.267 | 0.047 | **0.22** (🚀 Şiddetli) | 7 Kez |
 | `[44 - 71]` | 0.267 | 0.047 | **0.22** (🚀 Şiddetli) | 7 Kez |
+| `[34 - 65]` | 0.267 | 0.047 | **0.22** (🚀 Şiddetli) | 7 Kez |
 | `[47 - 62]` | 0.267 | 0.053 | **0.2133** (🚀 Şiddetli) | 8 Kez |
-| `[35 - 38]` | 0.267 | 0.06 | **0.2067** (🚀 Şiddetli) | 9 Kez |
+| `[35 - 47]` | 0.267 | 0.06 | **0.2067** (🚀 Şiddetli) | 9 Kez |
 
 
 _Bu rapor otonom işçi tarafından her 10 dakikada bir sıfır gecikmeyle üretilir._
