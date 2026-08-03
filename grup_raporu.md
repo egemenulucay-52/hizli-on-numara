@@ -1,36 +1,36 @@
 # 📊 Hızlı On Numara Kuantum Grup Raporu
-> **Son Güncellenme:** 2026-08-03 05:18:48 (TR)  
-> **Analiz Edilen Son Çekiliş No:** `46466` | **Tarih:** `2026-08-03 05:18:27`
+> **Son Güncellenme:** 2026-08-03 05:28:46 (TR)  
+> **Analiz Edilen Son Çekiliş No:** `46468` | **Tarih:** `2026-08-03 05:28:25`
 
 ---
 
 ### 🧱 1. Onluk Blok Dağılım Matrisi
 | Onluk Bölge | Son 5 Tur Ortalaması | Son 20 Tur Ortalaması | Kuantum Durum |
 | :--- | :---: | :---: | :--- |
-| **1_10** | 2.6 | 2.6 | ⚖️ DENGELİ |
-| **11_20** | 2.2 | 2.65 | ⚖️ DENGELİ |
-| **21_30** | 2.8 | 2.75 | ⚖️ DENGELİ |
-| **31_40** | 3.6 | 2.45 | 🔥 YOĞUN |
-| **41_50** | 2.8 | 3.0 | ⚖️ DENGELİ |
-| **51_60** | 2.6 | 2.45 | ⚖️ DENGELİ |
-| **61_70** | 1.6 | 1.8 | ❄️ KURAK (Aday) |
-| **71_80** | 1.8 | 2.3 | ❄️ KURAK (Aday) |
+| **1_10** | 2.0 | 2.45 | ❄️ KURAK (Aday) |
+| **11_20** | 1.4 | 2.3 | ❄️ KURAK (Aday) |
+| **21_30** | 2.8 | 2.8 | ⚖️ DENGELİ |
+| **31_40** | 3.8 | 2.65 | 🔥 YOĞUN |
+| **41_50** | 3.2 | 3.05 | 🔥 YOĞUN |
+| **51_60** | 2.4 | 2.6 | ⚖️ DENGELİ |
+| **61_70** | 2.0 | 1.75 | ❄️ KURAK (Aday) |
+| **71_80** | 2.4 | 2.4 | ⚖️ DENGELİ |
 
 ---
 
 ### 🔢 2. Son Basamak (Ending Digits) Grup Kümelenmesi
 | Sayı Grubu Kökü | Son 5 Tur Ort | Son 20 Tur Ort | Trend İvmesi |
 | :--- | :---: | :---: | :--- |
-| Sonu 3 Olanlar | 3.0 | 2.15 | 📈 Yükselişte |
-| Sonu 8 Olanlar | 2.6 | 2.15 | 📈 Yükselişte |
-| Sonu 9 Olanlar | 2.4 | 2.05 | 📈 Yükselişte |
-| Sonu 0 Olanlar | 2.4 | 2.1 | 📈 Yükselişte |
-| Sonu 1 Olanlar | 2.0 | 1.95 | 📈 Yükselişte |
-| Sonu 2 Olanlar | 1.8 | 2.05 | 📉 Düşüşte |
-| Sonu 5 Olanlar | 1.8 | 2.05 | 📉 Düşüşte |
-| Sonu 6 Olanlar | 1.6 | 2.45 | 📉 Düşüşte |
-| Sonu 4 Olanlar | 1.2 | 1.3 | 📉 Düşüşte |
-| Sonu 7 Olanlar | 1.2 | 1.75 | 📉 Düşüşte |
+| Sonu 9 Olanlar | 3.4 | 2.25 | 📈 Yükselişte |
+| Sonu 8 Olanlar | 2.4 | 2.15 | 📈 Yükselişte |
+| Sonu 2 Olanlar | 2.2 | 2.0 | 📈 Yükselişte |
+| Sonu 0 Olanlar | 2.2 | 2.1 | 📈 Yükselişte |
+| Sonu 1 Olanlar | 2.0 | 1.9 | 📈 Yükselişte |
+| Sonu 3 Olanlar | 2.0 | 2.05 | 📉 Düşüşte |
+| Sonu 7 Olanlar | 1.8 | 1.75 | 📈 Yükselişte |
+| Sonu 5 Olanlar | 1.6 | 2.2 | 📉 Düşüşte |
+| Sonu 6 Olanlar | 1.4 | 2.3 | 📉 Düşüşte |
+| Sonu 4 Olanlar | 1.0 | 1.3 | 📉 Düşüşte |
 
 ---
 
@@ -39,32 +39,32 @@
 
 | Ortaklık Tipi | En Az 1 Kez Çıkan (Benzersiz) | En Az 2 Kez Çıkan (Tekrarlayan) | En Az 3 Kez Çıkan | Tarihsel En Yüksek Tekrar |
 | :--- | :---: | :---: | :---: | :---: |
-| **2'lı Ortak Gruplar** | 3159 | 3154 | 3142 | **21 Kez** |
-| **3'lı Ortak Gruplar** | 72071 | 50781 | 28464 | **11 Kez** |
-| **4'lı Ortak Gruplar** | 584051 | 123041 | 17586 | **6 Kez** |
-| **5'lı Ortak Gruplar** | 2219426 | 103109 | 3009 | **4 Kez** |
-| **6'lı Ortak Gruplar** | 5761353 | 52408 | 238 | **4 Kez** |
+| **2'lı Ortak Gruplar** | 3160 | 3154 | 3142 | **21 Kez** |
+| **3'lı Ortak Gruplar** | 72121 | 50906 | 28502 | **11 Kez** |
+| **4'lı Ortak Gruplar** | 584759 | 122742 | 17279 | **6 Kez** |
+| **5'lı Ortak Gruplar** | 2220713 | 101941 | 2892 | **4 Kez** |
+| **6'lı Ortak Gruplar** | 5762535 | 51240 | 224 | **4 Kez** |
 
 ---
 
 ### 🕸 * 4. İkili Sayı Grupları (Çeteler) Kombinasyonel MACD İvme Tablosu
 | İkili Sayı Grubu | Son 15 Tur Ort (Kısa) | Son 150 Tur Ort (Uzun) | Grup MACD Skoru | Toplam Beraber Çıkma |
 | :--- | :---: | :---: | :---: | :---: |
+| `[25 - 29]` | 0.4 | 0.08 | **0.32** (🚀 Şiddetli) | 12 Kez |
 | `[18 - 25]` | 0.4 | 0.093 | **0.3067** (🚀 Şiddetli) | 14 Kez |
-| `[29 - 41]` | 0.333 | 0.053 | **0.28** (🚀 Şiddetli) | 8 Kez |
-| `[1 - 56]` | 0.333 | 0.067 | **0.2667** (🚀 Şiddetli) | 10 Kez |
+| `[25 - 40]` | 0.333 | 0.053 | **0.28** (🚀 Şiddetli) | 8 Kez |
+| `[40 - 43]` | 0.333 | 0.06 | **0.2733** (🚀 Şiddetli) | 9 Kez |
 | `[18 - 29]` | 0.333 | 0.067 | **0.2667** (🚀 Şiddetli) | 10 Kez |
-| `[25 - 29]` | 0.333 | 0.073 | **0.26** (🚀 Şiddetli) | 11 Kez |
-| `[2 - 39]` | 0.333 | 0.08 | **0.2533** (🚀 Şiddetli) | 12 Kez |
-| `[29 - 56]` | 0.267 | 0.033 | **0.2333** (🚀 Şiddetli) | 5 Kez |
-| `[13 - 15]` | 0.267 | 0.033 | **0.2333** (🚀 Şiddetli) | 5 Kez |
+| `[45 - 51]` | 0.333 | 0.067 | **0.2667** (🚀 Şiddetli) | 10 Kez |
+| `[6 - 25]` | 0.333 | 0.067 | **0.2667** (🚀 Şiddetli) | 10 Kez |
+| `[1 - 56]` | 0.333 | 0.067 | **0.2667** (🚀 Şiddetli) | 10 Kez |
+| `[25 - 39]` | 0.333 | 0.087 | **0.2467** (🚀 Şiddetli) | 13 Kez |
+| `[6 - 46]` | 0.333 | 0.1 | **0.2333** (🚀 Şiddetli) | 15 Kez |
+| `[29 - 45]` | 0.267 | 0.047 | **0.22** (🚀 Şiddetli) | 7 Kez |
 | `[13 - 29]` | 0.267 | 0.047 | **0.22** (🚀 Şiddetli) | 7 Kez |
-| `[29 - 31]` | 0.333 | 0.113 | **0.22** (🚀 Şiddetli) | 17 Kez |
-| `[25 - 40]` | 0.267 | 0.047 | **0.22** (🚀 Şiddetli) | 7 Kez |
-| `[40 - 43]` | 0.267 | 0.053 | **0.2133** (🚀 Şiddetli) | 8 Kez |
-| `[41 - 56]` | 0.267 | 0.053 | **0.2133** (🚀 Şiddetli) | 8 Kez |
+| `[51 - 76]` | 0.267 | 0.047 | **0.22** (🚀 Şiddetli) | 7 Kez |
+| `[29 - 41]` | 0.267 | 0.053 | **0.2133** (🚀 Şiddetli) | 8 Kez |
 | `[15 - 56]` | 0.267 | 0.053 | **0.2133** (🚀 Şiddetli) | 8 Kez |
-| `[6 - 56]` | 0.267 | 0.053 | **0.2133** (🚀 Şiddetli) | 8 Kez |
 
 
 _Bu rapor otonom işçi tarafından her 10 dakikada bir sıfır gecikmeyle üretilir._
