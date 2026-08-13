@@ -1,5 +1,5 @@
 # 📊 Hızlı On Numara Kuantum Grup Raporu
-> **Son Güncellenme:** 2026-08-13 14:47:06 (TR)  
+> **Son Güncellenme:** 2026-08-13 14:48:51 (TR)  
 > **Analiz Edilen Son Çekiliş No:** `48750` | **Tarih:** `2026-08-13 14:46:46`
 
 ---
@@ -50,21 +50,21 @@
 ### 🕸 * 4. İkili Sayı Grupları (Çeteler) Kombinasyonel MACD İvme Tablosu
 | İkili Sayı Grubu | Son 15 Tur Ort (Kısa) | Son 150 Tur Ort (Uzun) | Grup MACD Skoru | Toplam Beraber Çıkma |
 | :--- | :---: | :---: | :---: | :---: |
-| `[30 - 79]` | 0.333 | 0.067 | **0.2667** (🚀 Şiddetli) | 10 Kez |
 | `[12 - 59]` | 0.333 | 0.067 | **0.2667** (🚀 Şiddetli) | 10 Kez |
+| `[30 - 79]` | 0.333 | 0.067 | **0.2667** (🚀 Şiddetli) | 10 Kez |
 | `[16 - 33]` | 0.267 | 0.053 | **0.2133** (🚀 Şiddetli) | 8 Kez |
 | `[6 - 38]` | 0.267 | 0.053 | **0.2133** (🚀 Şiddetli) | 8 Kez |
-| `[21 - 74]` | 0.267 | 0.06 | **0.2067** (🚀 Şiddetli) | 9 Kez |
 | `[21 - 79]` | 0.267 | 0.06 | **0.2067** (🚀 Şiddetli) | 9 Kez |
 | `[9 - 30]` | 0.267 | 0.06 | **0.2067** (🚀 Şiddetli) | 9 Kez |
+| `[21 - 74]` | 0.267 | 0.06 | **0.2067** (🚀 Şiddetli) | 9 Kez |
 | `[75 - 79]` | 0.267 | 0.067 | **0.2** (🚀 Şiddetli) | 10 Kez |
 | `[6 - 25]` | 0.267 | 0.067 | **0.2** (🚀 Şiddetli) | 10 Kez |
 | `[59 - 79]` | 0.267 | 0.073 | **0.1933** (🚀 Şiddetli) | 11 Kez |
 | `[38 - 72]` | 0.267 | 0.073 | **0.1933** (🚀 Şiddetli) | 11 Kez |
-| `[18 - 79]` | 0.267 | 0.08 | **0.1867** (🚀 Şiddetli) | 12 Kez |
+| `[33 - 38]` | 0.267 | 0.08 | **0.1867** (🚀 Şiddetli) | 12 Kez |
+| `[47 - 79]` | 0.267 | 0.08 | **0.1867** (🚀 Şiddetli) | 12 Kez |
 | `[19 - 79]` | 0.267 | 0.08 | **0.1867** (🚀 Şiddetli) | 12 Kez |
 | `[9 - 79]` | 0.267 | 0.08 | **0.1867** (🚀 Şiddetli) | 12 Kez |
-| `[47 - 79]` | 0.267 | 0.08 | **0.1867** (🚀 Şiddetli) | 12 Kez |
 
 
 _Bu rapor otonom işçi tarafından her 10 dakikada bir sıfır gecikmeyle üretilir._
