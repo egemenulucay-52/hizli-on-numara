@@ -15,6 +15,7 @@ class PanelSmokeTests(unittest.TestCase):
             "Genel Bakış",
             "Keşifsel Analiz",
             "İkili ve Kombinasyonlar",
+            "Model Karşılaştırma",
             "İstatistiksel Kontrol",
             "Veri",
         ]

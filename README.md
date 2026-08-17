@@ -27,6 +27,10 @@ Milli Piyango API
 - `veri_modeli.py`: CSV şeması, doğrulama ve çekiliş sıralaması.
 - `analysis/model.py`: 80/20 teorik olasılık modeli ve beklenen değerler.
 - `analysis/descriptive.py`: Frekans, blok ve son basamak betimleyici özetleri.
+- `analysis/strategies.py`: M1–M6 deneysel sayı skorları.
+- `analysis/ensemble.py`: Robust skor normalizasyonu ve sabit ağırlıklı ensemble.
+- `analysis/backtest.py`: Look-ahead korumalı, eski→yeni walk-forward motoru.
+- `analysis/benchmark.py`: Exact random Hit@N beklentileri.
 - `analiz_motoru.py`: Geçiş sürecinde panel ve rapor tarafından paylaşılan eski analizler.
 - `istatistik.py`: Ki-kare, gecikme, geçiş matrisi ve sayı aralığı entropisi.
 - `veri_cekici.py`: API birincil kaynak, Selenium yedek kaynak.
@@ -59,6 +63,16 @@ python -m pip install -r requirements-bot.txt
 python veri_cekici.py
 ```
 
+Tarihsel walk-forward sonuçlarını yeniden üretmek için:
+
+```bash
+python backtest_uret.py --last 0 --minimum-training 500
+```
+
+Çıktılar `artifacts/backtest_results.csv` ve `artifacts/backtest_summary.csv`
+dosyalarına yazılır. Yalnız ardışık `N → N+1` hedefleri değerlendirilir; eksik
+çekilişlerin üzerinden geçiş veya geriye dönük canlı tahmin üretilmez.
+
 ## Streamlit Community Cloud
 
 1. GitHub deposunu Streamlit Community Cloud hesabına bağlayın.
@@ -86,4 +100,7 @@ Streamlit uygulaması GitHub'daki `main` dalı güncellendiğinde yeniden dağı
 python -m unittest discover -s tests -v
 ```
 
-Testler; CSV doğrulamasını, API fallback akışını, zaman ayrıştırmasını, Markov yönünü, teorik 80/20 modelini, betimleyici analizleri, tüm Streamlit bölümlerinin açılışını ve kombinasyon kapsamının 2–4 ile sınırlı kalmasını denetler.
+Testler; CSV doğrulamasını, API fallback akışını, zaman ayrıştırmasını, Markov
+yönünü, teorik 80/20 modelini, betimleyici analizleri, look-ahead korumasını,
+eksik çekiliş geçişlerini, tüm Streamlit bölümlerinin açılışını ve kombinasyon
+kapsamının 2–4 ile sınırlı kalmasını denetler.
