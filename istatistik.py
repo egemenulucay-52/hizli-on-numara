@@ -1,10 +1,10 @@
 import numpy as np
 import pandas as pd
-import scipy.stats as stats
-import re
 
 def ki_kare_testi(df, sayi_kolonlari):
-    """Sistemin rastlantısallığını ölçer (P-Value > 0.05 ise tamamen rastgeledir)"""
+    """Sayı frekanslarının eşit dağılımdan sapmasını Pearson ki-kare testiyle ölçer."""
+    import scipy.stats as stats
+
     tum_sayilar = df[sayi_kolonlari].values.flatten()
     gözlemlenen, _ = np.histogram(tum_sayilar, bins=range(1, 82))
     
@@ -16,7 +16,7 @@ def ki_kare_testi(df, sayi_kolonlari):
     return float(chi2_stat), float(p_value)
 
 def gecikme_derinligi_analizi(df, sayi_kolonlari):
-    """Sayıların kaç turdur çıkmadığını ve geometrik olasılık sınırını hesaplar"""
+    """Sayıların kaç turdur çıkmadığını ve bu gecikmeye ulaşma olasılığını hesaplar."""
     son_cekilisler = df[sayi_kolonlari].values
     gecikmeler = {}
     
@@ -26,34 +26,23 @@ def gecikme_derinligi_analizi(df, sayi_kolonlari):
             if sayi in tur:
                 break
             gecikme += 1
-        # Geometrik Dağılım: Bu gecikmeye ulaşma olasılığı (p=0.25)
-        teorik_olasilik = (0.75 ** gecikme) * 0.25
+        # Bir sayı her çekilişte 20/80=0.25 olasılıkla yer alır. En az bu kadar
+        # çekiliş boyunca görülmeme olasılığı P(X >= gecikme) = 0.75**gecikme'dir.
+        teorik_olasilik = 0.75 ** gecikme
         gecikmeler[sayi] = {"gecikme": gecikme, "olasilik": teorik_olasilik}
         
     return pd.DataFrame(gecikmeler).T.sort_values(by="gecikme", ascending=False)
 
-def tur_gecis_analizi(df, sayi_kolonlari):
-    """Peş peşe çekilişler arasındaki ortak sayı adetlerini inceler"""
-    son_cekilisler = df[sayi_kolonlari].values
-    ortak_adetler = []
-    
-    for idx in range(len(son_cekilisler) - 1):
-        tur_t = set(son_cekilisler[idx])
-        tur_t_eksi_1 = set(son_cekilisler[idx+1])
-        ortak = len(tur_t.intersection(tur_t_eksi_1))
-        ortak_adetler = ortak_adetler + [ortak]
-        
-    ortak_seri = pd.Series(ortak_adetler)
-    return ortak_seri.value_counts().reindex(range(0, 21), fill_value=0)
-
 def markov_zinciri_matrisi(df, sayi_kolonlari):
-    """80x80 boyutunda peş peşe sayı tetikleme olasılık matrisini kurar"""
+    """Yeni->eski sıralı veriden eski çekilişten yeni çekilişe geçiş matrisi kurar."""
     son_cekilisler = df[sayi_kolonlari].values
     matris = np.zeros((80, 80))
     
     for idx in range(len(son_cekilisler) - 1):
-        mevcut_tur = son_cekilisler[idx]
-        sonraki_tur = son_cekilisler[idx+1]
+        # CSV en yeniden en eskiye sıralıdır. Zaman yönünü korumak için
+        # idx+1 geçmiş, idx ise onu izleyen çekiliştir.
+        mevcut_tur = son_cekilisler[idx + 1]
+        sonraki_tur = son_cekilisler[idx]
         
         for a in mevcut_tur:
             for b in sonraki_tur:
@@ -67,7 +56,7 @@ def markov_zinciri_matrisi(df, sayi_kolonlari):
     return olasilik_matrisi
 
 def shannon_entropisi(df, sayi_kolonlari):
-    """Her çekilişin kaos/düzensizlik skorunu ölçer"""
+    """Her çekilişteki sıralı sayı aralıklarının entropisini ölçer."""
     entropiler = []
     
     for tur in df[sayi_kolonlari].values:

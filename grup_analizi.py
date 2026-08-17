@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 import os
 import itertools
 from collections import Counter
@@ -34,9 +33,11 @@ def grup_analizini_calistir():
     }
     
     blok_rapor = []
+    son_5_uzunluk = min(5, len(df))
+    son_20_uzunluk = min(20, len(df))
     for ad, aralik in bloklar.items():
-        s5_adet = df.head(5)[sayi_kolonlari].isin(aralik).sum().sum() / 5
-        s20_adet = df.head(20)[sayi_kolonlari].isin(aralik).sum().sum() / 20
+        s5_adet = df.head(son_5_uzunluk)[sayi_kolonlari].isin(aralik).sum().sum() / son_5_uzunluk
+        s20_adet = df.head(son_20_uzunluk)[sayi_kolonlari].isin(aralik).sum().sum() / son_20_uzunluk
         durum = "🔥 YOĞUN" if s5_adet > 2.8 else ("❄️ KURAK (Aday)" if s5_adet < 2.1 else "⚖️ DENGELİ")
         blok_rapor.append({"Grup": ad.replace("Grup_", ""), "Son 5 Tur Ort": round(s5_adet, 2), "Son 20 Tur Ort": round(s20_adet, 2), "Mevcut Durum": durum})
     df_blok = pd.DataFrame(blok_rapor)
@@ -45,8 +46,8 @@ def grup_analizini_calistir():
     basamak_rapor = []
     for b in range(10):
         grup_sayilari = [x for x in range(1, 81) if x % 10 == b]
-        s5_b_adet = df.head(5)[sayi_kolonlari].isin(grup_sayilari).sum().sum() / 5
-        s20_b_adet = df.head(20)[sayi_kolonlari].isin(grup_sayilari).sum().sum() / 20
+        s5_b_adet = df.head(son_5_uzunluk)[sayi_kolonlari].isin(grup_sayilari).sum().sum() / son_5_uzunluk
+        s20_b_adet = df.head(son_20_uzunluk)[sayi_kolonlari].isin(grup_sayilari).sum().sum() / son_20_uzunluk
         ivme = "📈 Yükselişte" if s5_b_adet > s20_b_adet else "📉 Düşüşte"
         basamak_rapor.append({"Son Basamak": f"Sonu {b} Olanlar", "Son 5 Ort": round(s5_b_adet, 2), "Son 20 Ort": round(s20_b_adet, 2), "İvme": ivme})
     df_basamak = pd.DataFrame(basamak_rapor).sort_values(by="Son 5 Ort", ascending=False)
@@ -57,7 +58,8 @@ def grup_analizini_calistir():
     draws_150 = df.head(long_horizon)[sayi_kolonlari].values.astype(int)
     
     k_summary = []
-    for k in [2, 3, 4, 5, 6]:
+    # Altılı kombinasyonlar bilinçli olarak kapsam dışıdır.
+    for k in [2, 3, 4, 5]:
         combo_counts = Counter()
         for row in draws_150:
             combos = itertools.combinations(sorted(row), k)
@@ -77,7 +79,7 @@ def grup_analizini_calistir():
         })
     df_k_summary = pd.DataFrame(k_summary)
 
-    # --- 4. MODEL: İKİLİ ÇETELER KOMBİNASYONEL MACD İVME TABLOSU ---
+    # --- 4. MODEL: İKİLİ GRUPLARIN KISA-UZUN DÖNEM FREKANS FARKI ---
     short_horizon = min(15, df_len)
     def cete_frekansi_hesapla(data_slice):
         counts = {}
@@ -101,23 +103,26 @@ def grup_analizini_calistir():
             "Grup": f"[{pair[0]} - {pair[1]}]",
             "Son 15 Ort": round(f_short, 3),
             "Son 150 Ort": round(f_long, 3),
-            "Grup_MACD": round(grup_macd, 4),
+            "Frekans_Farki": round(grup_macd, 4),
             "Toplam_Hit": counts_total.get(pair, 0)
         })
-    df_cete_macd = pd.DataFrame(cete_macd_rapor).sort_values(by="Grup_MACD", ascending=False).head(15)
+    df_cete_macd = pd.DataFrame(
+        cete_macd_rapor,
+        columns=["Grup", "Son 15 Ort", "Son 150 Ort", "Frekans_Farki", "Toplam_Hit"]
+    ).sort_values(by="Frekans_Farki", ascending=False).head(15)
 
     # --- CSV OLARAK YEDEKLE ---
     df_blok.to_csv(RAPOR_CSV, index=False)
     
     # --- GITHUB MARKDOWN RAPORU OLUŞTURMA ---
-    md_content = f"""# 📊 Hızlı On Numara Kuantum Grup Raporu
-> **Son Güncellenme:** {son_cekilis_tarih} (TR)  
-> **Analiz Edilen Son Çekiliş No:** `{son_cekilis_no}` | **Tarih:** `{son_cekilis_tarih}`
+    md_content = f"""# 📊 Hızlı On Numara Grup Raporu
+> **CSV'deki Son Kayıt Zamanı:** {son_cekilis_tarih}
+> **Analiz Edilen Son Çekiliş No:** `{son_cekilis_no}`
 
 ---
 
 ### 🧱 1. Onluk Blok Dağılım Matrisi
-| Onluk Bölge | Son 5 Tur Ortalaması | Son 20 Tur Ortalaması | Kuantum Durum |
+| Onluk Bölge | Son 5 Tur Ortalaması | Son 20 Tur Ortalaması | Durum |
 | :--- | :---: | :---: | :--- |
 """
     for _, r in df_blok.iterrows():
@@ -136,7 +141,7 @@ def grup_analizini_calistir():
     md_content += """
 ---
 
-### 📐 3. Makro Kombinasyonel Kümelenme Dağılım Matrisi (Son 150 Çekiliş)
+### 📐 3. İkili-Beşli Kombinasyon Kümelenmesi (Son 150 Çekiliş)
 *Sayı gruplarının detayına inmeden önce, çekilen 20 sayı içinden kaçarlı ortak grupların doğduğunu ve bunların tekrarlanma istatistiklerini veren makro tablodur.*
 
 | Ortaklık Tipi | En Az 1 Kez Çıkan (Benzersiz) | En Az 2 Kez Çıkan (Tekrarlayan) | En Az 3 Kez Çıkan | Tarihsel En Yüksek Tekrar |
@@ -148,15 +153,15 @@ def grup_analizini_calistir():
     md_content += """
 ---
 
-### 🕸 * 4. İkili Sayı Grupları (Çeteler) Kombinasyonel MACD İvme Tablosu
-| İkili Sayı Grubu | Son 15 Tur Ort (Kısa) | Son 150 Tur Ort (Uzun) | Grup MACD Skoru | Toplam Beraber Çıkma |
+### 🕸 4. İkili Sayı Grupları Kısa-Uzun Dönem Frekans Farkı
+| İkili Sayı Grubu | Son 15 Tur Ort (Kısa) | Son 150 Tur Ort (Uzun) | Frekans Farkı | Toplam Beraber Çıkma |
 | :--- | :---: | :---: | :---: | :---: |
 """
     for _, r in df_cete_macd.iterrows():
-        emoji = "🚀 Şiddetli" if r['Grup_MACD'] > 0.05 else ("📈 Pozitif" if r['Grup_MACD'] > 0 else "📉 Zayıf")
-        md_content += f"| `{r['Grup']}` | {r['Son 15 Ort']} | {r['Son 150 Ort']} | **{r['Grup_MACD']}** ({emoji}) | {r['Toplam_Hit']} Kez |\n"
+        emoji = "📈 Yüksek Pozitif" if r['Frekans_Farki'] > 0.05 else ("↗️ Pozitif" if r['Frekans_Farki'] > 0 else "↘️ Negatif")
+        md_content += f"| `{r['Grup']}` | {r['Son 15 Ort']} | {r['Son 150 Ort']} | **{r['Frekans_Farki']}** ({emoji}) | {r['Toplam_Hit']} Kez |\n"
 
-    md_content += "\n\n_Bu rapor otonom işçi tarafından her 10 dakikada bir sıfır gecikmeyle üretilir._"
+    md_content += "\n\n_Bu rapor zamanlanmış GitHub Actions işi tarafından güncellenir; çalışma zamanı kesin değildir._"
 
     with open(RAPOR_MD, "w", encoding="utf-8") as f:
         f.write(md_content)

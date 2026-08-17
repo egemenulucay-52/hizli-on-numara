@@ -2,13 +2,22 @@ import time
 import pandas as pd
 import os
 import requests
-from datetime import datetime, timezone, timedelta
+import tempfile
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
+from veri_modeli import SAYI_KOLONLARI, cekilisleri_sirala, veri_cercevesini_dogrula
 
 CSV_DOSYASI = "hizli_on_numara.csv"
+ISTANBUL_SAAT_DILIMI = ZoneInfo("Europe/Istanbul")
+
+
+def istanbul_zamani():
+    return datetime.now(ISTANBUL_SAAT_DILIMI)
+
 
 def mevcut_cekilisleri_oku():
     mevcut = set()
@@ -17,7 +26,8 @@ def mevcut_cekilisleri_oku():
             eski_df = pd.read_csv(CSV_DOSYASI)
             if "CekilisNo" in eski_df.columns:
                 mevcut = set(eski_df["CekilisNo"].astype(str).tolist())
-        except: pass
+        except (OSError, ValueError, pd.errors.ParserError) as hata:
+            print(f"⚠️ Mevcut CSV okunamadı: {hata}")
     return mevcut
 
 def veri_tabanina_kaydet(yeni_eklenen_ler):
@@ -33,8 +43,19 @@ def veri_tabanina_kaydet(yeni_eklenen_ler):
         toplam_df = yeni_df
         
     toplam_df["CekilisNo"] = toplam_df["CekilisNo"].astype(str)
-    toplam_df = toplam_df.drop_duplicates(subset=["CekilisNo"]).sort_values(by="CekilisNo", ascending=False)
-    toplam_df.to_csv(CSV_DOSYASI, index=False, encoding='utf-8')
+    toplam_df = toplam_df.drop_duplicates(subset=["CekilisNo"])
+    toplam_df = cekilisleri_sirala(toplam_df)
+    veri_cercevesini_dogrula(toplam_df)
+
+    hedef_dizin = os.path.dirname(os.path.abspath(CSV_DOSYASI))
+    gecici_fd, gecici_yol = tempfile.mkstemp(prefix="hizli_on_numara_", suffix=".csv", dir=hedef_dizin)
+    os.close(gecici_fd)
+    try:
+        toplam_df.to_csv(gecici_yol, index=False, encoding="utf-8")
+        os.replace(gecici_yol, CSV_DOSYASI)
+    finally:
+        if os.path.exists(gecici_yol):
+            os.remove(gecici_yol)
     print(f"💾 CSV Başarıyla Güncellendi! Toplam satır sayısı: {len(toplam_df)}")
 
 
@@ -54,28 +75,41 @@ def motor_1_api():
         raise Exception(f"Sunucu durum kodu: {response.status_code}")
         
     data = response.json()
-    cekilisler = data.get("data") or data.get("results") or []
+    cekilisler = data.get("data") or data.get("results")
+    if isinstance(cekilisler, dict):
+        cekilisler = cekilisler.get("content") or cekilisler.get("results")
+    if not isinstance(cekilisler, list) or not cekilisler:
+        raise ValueError("API geçerli ve boş olmayan bir çekiliş listesi döndürmedi.")
     
     mevcut_cekilisler = mevcut_cekilisleri_oku()
     yeni_eklenen_ler = []
+    gecerli_cekilis_sayisi = 0
     
     for c in cekilisler:
         try:
             c_no = str(c.get("drawId") or c.get("id") or c.get("cekilisNo") or "")
-            if not c_no or c_no in mevcut_cekilisler: continue
+            if not c_no:
+                continue
             
             toplar = c.get("numbers") or c.get("result") or c.get("kazananSayilar")
             if not toplar or not isinstance(toplar, list): continue
             
             gecici_sayilar = [int(n) for n in toplar if str(n).isdigit() and 1 <= int(n) <= 80]
-            if len(gecici_sayilar) == 20:
+            if len(gecici_sayilar) == 20 and len(set(gecici_sayilar)) == 20:
+                gecerli_cekilis_sayisi += 1
+                if c_no in mevcut_cekilisler:
+                    continue
                 gecici_sayilar.sort()
-                satir_verisi = {"Tarih": time.strftime('%Y-%m-%d %H:%M:%S'), "CekilisNo": c_no}
+                satir_verisi = {"Tarih": istanbul_zamani().strftime('%Y-%m-%d %H:%M:%S'), "CekilisNo": c_no}
                 for i, s in enumerate(gecici_sayilar, start=1):
                     satir_verisi[f"Sayi_{i}"] = s
                 yeni_eklenen_ler.append(satir_verisi)
                 print(f"✨ API'den Çekiliş Süzüldü: {c_no}")
-        except: continue
+        except (TypeError, ValueError, AttributeError) as hata:
+            print(f"⚠️ API kaydı çözümlenemedi: {hata}")
+
+    if gecerli_cekilis_sayisi == 0:
+        raise ValueError("API yanıtında doğrulanabilir 20 sayılı çekiliş bulunamadı.")
         
     veri_tabanina_kaydet(yeni_eklenen_ler)
 
@@ -104,7 +138,7 @@ def motor_2_stealth_selenium():
         time.sleep(12)
         
         # --- 🕒 ARALIK HESAPLAMA (Geçmiş ve Canlı Slot Ayarı) ---
-        tr_saati = datetime.now(timezone.utc) + timedelta(hours=3)
+        tr_saati = istanbul_zamani()
         current_hour = tr_saati.hour
         
         # 1. Şu anki canlı slot (Örn: 15:00-16:00)
@@ -132,7 +166,8 @@ def motor_2_stealth_selenium():
                         print(f"🎯 Slot Seçildi: {txt}")
                         slot_bulundu = True
                         break
-                except: continue
+                except Exception as element_hatasi:
+                    print(f"⚠️ Saat aralığı öğesi işlenemedi: {element_hatasi}")
                 
             if not slot_bulundu:
                 print(f"⚠️ [{slot_hedef}] görünür durumda bulunamadı, es geçiliyor.")
@@ -151,7 +186,8 @@ def motor_2_stealth_selenium():
                         print("🎯 Filtre uygulandı, veriler çekiliyor...")
                         time.sleep(10)
                         break
-                except: continue
+                except Exception as buton_hatasi:
+                    print(f"⚠️ Filtre düğmesi işlenemedi: {buton_hatasi}")
                 
             # Sayfadaki verileri okuma
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight/3);")
@@ -185,7 +221,7 @@ def motor_2_stealth_selenium():
                                 
                                 if len(gecici_sayilar) == 20:
                                     gecici_sayilar.sort()
-                                    satir_verisi = {"Tarih": time.strftime('%Y-%m-%d %H:%M:%S'), "CekilisNo": c_no}
+                                    satir_verisi = {"Tarih": istanbul_zamani().strftime('%Y-%m-%d %H:%M:%S'), "CekilisNo": c_no}
                                     for idx, s in enumerate(gecici_sayilar, start=1):
                                         satir_verisi[f"Sayi_{idx}"] = s
                                     yeni_eklenen_ler.append(satir_verisi)
@@ -195,21 +231,25 @@ def motor_2_stealth_selenium():
                 i += 1
         
         veri_tabanina_kaydet(yeni_eklenen_ler)
-        driver.quit()
     except Exception as e:
         print(f"❌ Motor 2 Hatası: {e}")
-        driver.quit()
+        raise
+    finally:
+        try:
+            driver.quit()
+        except Exception as kapatma_hatasi:
+            print(f"⚠️ Tarayıcı kapatılırken hata oluştu: {kapatma_hatasi}")
 
 
 def canli_cekilis_takip_et():
     try:
         motor_1_api()
     except Exception as api_hatasi:
-        print(f"⚠️ Motor 1 (API) pas geçildi, hibrit moda aktarılıyor...")
+        print(f"⚠️ Motor 1 (API) başarısız: {api_hatasi}. Selenium yedeğine geçiliyor...")
         try:
             motor_2_stealth_selenium()
         except Exception as sel_hatasi:
-            print(f"❌ Kritik Hata: İki motor da başarısız! {sel_hatasi}")
+            raise RuntimeError(f"İki veri motoru da başarısız. Selenium hatası: {sel_hatasi}") from sel_hatasi
 
 if __name__ == "__main__":
     canli_cekilis_takip_et()
