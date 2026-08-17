@@ -9,7 +9,7 @@ import grup_analizi
 
 
 class GrupAnaliziTestleri(unittest.TestCase):
-    def test_altili_kombinasyon_rapora_girmez(self):
+    def test_yalniz_ikili_uclu_dortlu_kombinasyonlar_rapora_girer(self):
         satirlar = []
         for cekilis_no in range(10005, 10000, -1):
             satir = {"Tarih": "2026-08-17 21:00:00", "CekilisNo": str(cekilis_no)}
@@ -32,7 +32,8 @@ class GrupAnaliziTestleri(unittest.TestCase):
             with open(rapor_yolu, encoding="utf-8") as rapor_dosyasi:
                 rapor = rapor_dosyasi.read()
 
-            self.assertIn("5'lı Ortak Gruplar", rapor)
+            self.assertIn("4'lı Ortak Gruplar", rapor)
+            self.assertNotIn("5'lı Ortak Gruplar", rapor)
             self.assertNotIn("6'lı Ortak Gruplar", rapor)
 
 

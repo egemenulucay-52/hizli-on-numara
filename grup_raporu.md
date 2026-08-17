@@ -34,7 +34,7 @@
 
 ---
 
-### 📐 3. İkili-Beşli Kombinasyon Kümelenmesi (Son 150 Çekiliş)
+### 📐 3. İkili-Dörtlü Kombinasyon Kümelenmesi (Son 150 Çekiliş)
 *Sayı gruplarının detayına inmeden önce, çekilen 20 sayı içinden kaçarlı ortak grupların doğduğunu ve bunların tekrarlanma istatistiklerini veren makro tablodur.*
 
 | Ortaklık Tipi | En Az 1 Kez Çıkan (Benzersiz) | En Az 2 Kez Çıkan (Tekrarlayan) | En Az 3 Kez Çıkan | Tarihsel En Yüksek Tekrar |
@@ -42,7 +42,6 @@
 | **2'lı Ortak Gruplar** | 3160 | 3156 | 3148 | **20 Kez** |
 | **3'lı Ortak Gruplar** | 72088 | 50715 | 28336 | **11 Kez** |
 | **4'lı Ortak Gruplar** | 583444 | 123168 | 17927 | **6 Kez** |
-| **5'lı Ortak Gruplar** | 2217541 | 104709 | 3266 | **4 Kez** |
 
 ---
 

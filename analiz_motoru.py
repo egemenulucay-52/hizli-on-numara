@@ -4,8 +4,7 @@ from collections import Counter
 import numpy as np
 import pandas as pd
 
-
-KOMBINASYON_BOYUTLARI = (2, 3, 4, 5)
+from analysis.model import COMBINATION_SIZES as KOMBINASYON_BOYUTLARI
 
 
 def cok_boyutlu_skorlar(df, sayi_kolonlari):
