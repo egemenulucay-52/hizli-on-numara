@@ -1,27 +1,38 @@
-name: 7/24 Canli Veri Toplayici
+name: Canli Veri Toplayici ve Raporlayici
 
 on:
   schedule:
-    # Her 5 dakikada bir otomatik tetiklenir
+    # Her 15 dakikada bir tetiklenmesi istenir; GitHub zamanlamayı geciktirebilir.
     - cron: '3,18,33,48 * * * *'
-  workflow_dispatch: # İstediğimizde elle de başlatabilmek için
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hizli-on-numara-veri-yazici
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
     - name: Kodlari Klonla
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Python Kur
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
+        cache: pip
+        cache-dependency-path: requirements-bot.txt
 
     - name: Kutuphaneleri Yukle
-      run: |
-        pip install pandas selenium webdriver-manager
+      run: pip install -r requirements-bot.txt
 
     - name: Botu Çalistir (Veri Cek)
       run: python veri_cekici.py
@@ -31,10 +42,13 @@ jobs:
 
     - name: Yeni Verileri GitHub'a Geri Kaydet
       run: |
-          git config --global user.name 'Veri Botu'
-          git config --global user.email 'bot@veri.com'
-          # Nokta atışı dosya yerine her şeyi (CSV + MD + Yeni ne varsa) sahneye ekle:
-          git add -A
-          # Eğer değişen bir şey yoksa workflow'un çökmemesi için korumalı commit:
-          git diff-index --quiet HEAD || git commit -m "🤖 Bot: Yeni çekiliş verileri ve grup raporu güncellendi"
-          git push origin main
+        git config user.name 'Veri Botu'
+        git config user.email 'bot@veri.com'
+        git add hizli_on_numara.csv grup_analizi.csv grup_raporu.md
+        if git diff --cached --quiet; then
+          echo "Kaydedilecek veri veya rapor değişikliği yok."
+          exit 0
+        fi
+        git commit -m "🤖 Bot: Yeni çekiliş verileri ve grup raporu güncellendi"
+        git pull --rebase origin main
+        git push origin HEAD:main
