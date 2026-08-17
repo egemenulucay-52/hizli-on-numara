@@ -1,11 +1,11 @@
-# 📊 Hızlı On Numara Kuantum Grup Raporu
-> **Son Güncellenme:** 2026-08-17 19:58:29 (TR)  
-> **Analiz Edilen Son Çekiliş No:** `49681` | **Tarih:** `2026-08-17 19:58:29`
+# 📊 Hızlı On Numara Grup Raporu
+> **CSV'deki Son Toplanma Zamanı:** 2026-08-17 19:58:29
+> **Analiz Edilen Son Çekiliş No:** `49681`
 
 ---
 
 ### 🧱 1. Onluk Blok Dağılım Matrisi
-| Onluk Bölge | Son 5 Tur Ortalaması | Son 20 Tur Ortalaması | Kuantum Durum |
+| Onluk Bölge | Son 5 Tur Ortalaması | Son 20 Tur Ortalaması | Durum |
 | :--- | :---: | :---: | :--- |
 | **1_10** | 2.6 | 2.5 | ⚖️ DENGELİ |
 | **11_20** | 2.6 | 2.5 | ⚖️ DENGELİ |
@@ -34,7 +34,7 @@
 
 ---
 
-### 📐 3. Makro Kombinasyonel Kümelenme Dağılım Matrisi (Son 150 Çekiliş)
+### 📐 3. İkili-Beşli Kombinasyon Kümelenmesi (Son 150 Çekiliş)
 *Sayı gruplarının detayına inmeden önce, çekilen 20 sayı içinden kaçarlı ortak grupların doğduğunu ve bunların tekrarlanma istatistiklerini veren makro tablodur.*
 
 | Ortaklık Tipi | En Az 1 Kez Çıkan (Benzersiz) | En Az 2 Kez Çıkan (Tekrarlayan) | En Az 3 Kez Çıkan | Tarihsel En Yüksek Tekrar |
@@ -43,28 +43,27 @@
 | **3'lı Ortak Gruplar** | 72206 | 50829 | 28342 | **11 Kez** |
 | **4'lı Ortak Gruplar** | 584040 | 122876 | 17684 | **6 Kez** |
 | **5'lı Ortak Gruplar** | 2218116 | 104190 | 3212 | **5 Kez** |
-| **6'lı Ortak Gruplar** | 5759086 | 54600 | 311 | **4 Kez** |
 
 ---
 
-### 🕸 * 4. İkili Sayı Grupları (Çeteler) Kombinasyonel MACD İvme Tablosu
-| İkili Sayı Grubu | Son 15 Tur Ort (Kısa) | Son 150 Tur Ort (Uzun) | Grup MACD Skoru | Toplam Beraber Çıkma |
+### 🕸 4. İkili Sayı Grupları Kısa-Uzun Dönem Frekans Farkı
+| İkili Sayı Grubu | Son 15 Tur Ort (Kısa) | Son 150 Tur Ort (Uzun) | Frekans Farkı | Toplam Beraber Çıkma |
 | :--- | :---: | :---: | :---: | :---: |
-| `[10 - 48]` | 0.333 | 0.047 | **0.2867** (🚀 Şiddetli) | 7 Kez |
-| `[10 - 62]` | 0.333 | 0.067 | **0.2667** (🚀 Şiddetli) | 10 Kez |
-| `[12 - 76]` | 0.333 | 0.087 | **0.2467** (🚀 Şiddetli) | 13 Kez |
-| `[49 - 73]` | 0.333 | 0.093 | **0.24** (🚀 Şiddetli) | 14 Kez |
-| `[10 - 18]` | 0.267 | 0.047 | **0.22** (🚀 Şiddetli) | 7 Kez |
-| `[10 - 19]` | 0.267 | 0.053 | **0.2133** (🚀 Şiddetli) | 8 Kez |
-| `[37 - 66]` | 0.267 | 0.06 | **0.2067** (🚀 Şiddetli) | 9 Kez |
-| `[37 - 52]` | 0.267 | 0.06 | **0.2067** (🚀 Şiddetli) | 9 Kez |
-| `[2 - 62]` | 0.267 | 0.067 | **0.2** (🚀 Şiddetli) | 10 Kez |
-| `[10 - 72]` | 0.267 | 0.067 | **0.2** (🚀 Şiddetli) | 10 Kez |
-| `[10 - 73]` | 0.267 | 0.067 | **0.2** (🚀 Şiddetli) | 10 Kez |
-| `[10 - 26]` | 0.267 | 0.067 | **0.2** (🚀 Şiddetli) | 10 Kez |
-| `[43 - 76]` | 0.267 | 0.073 | **0.1933** (🚀 Şiddetli) | 11 Kez |
-| `[12 - 43]` | 0.267 | 0.073 | **0.1933** (🚀 Şiddetli) | 11 Kez |
-| `[37 - 70]` | 0.267 | 0.08 | **0.1867** (🚀 Şiddetli) | 12 Kez |
+| `[10 - 48]` | 0.333 | 0.047 | **0.2867** (📈 Yüksek Pozitif) | 7 Kez |
+| `[10 - 62]` | 0.333 | 0.067 | **0.2667** (📈 Yüksek Pozitif) | 10 Kez |
+| `[12 - 76]` | 0.333 | 0.087 | **0.2467** (📈 Yüksek Pozitif) | 13 Kez |
+| `[49 - 73]` | 0.333 | 0.093 | **0.24** (📈 Yüksek Pozitif) | 14 Kez |
+| `[10 - 18]` | 0.267 | 0.047 | **0.22** (📈 Yüksek Pozitif) | 7 Kez |
+| `[10 - 19]` | 0.267 | 0.053 | **0.2133** (📈 Yüksek Pozitif) | 8 Kez |
+| `[37 - 66]` | 0.267 | 0.06 | **0.2067** (📈 Yüksek Pozitif) | 9 Kez |
+| `[37 - 52]` | 0.267 | 0.06 | **0.2067** (📈 Yüksek Pozitif) | 9 Kez |
+| `[10 - 73]` | 0.267 | 0.067 | **0.2** (📈 Yüksek Pozitif) | 10 Kez |
+| `[10 - 72]` | 0.267 | 0.067 | **0.2** (📈 Yüksek Pozitif) | 10 Kez |
+| `[10 - 26]` | 0.267 | 0.067 | **0.2** (📈 Yüksek Pozitif) | 10 Kez |
+| `[2 - 62]` | 0.267 | 0.067 | **0.2** (📈 Yüksek Pozitif) | 10 Kez |
+| `[12 - 43]` | 0.267 | 0.073 | **0.1933** (📈 Yüksek Pozitif) | 11 Kez |
+| `[43 - 76]` | 0.267 | 0.073 | **0.1933** (📈 Yüksek Pozitif) | 11 Kez |
+| `[31 - 73]` | 0.267 | 0.08 | **0.1867** (📈 Yüksek Pozitif) | 12 Kez |
 
 
-_Bu rapor otonom işçi tarafından her 10 dakikada bir sıfır gecikmeyle üretilir._
+_Bu rapor zamanlanmış GitHub Actions işi tarafından güncellenir; çalışma zamanı kesin değildir._
