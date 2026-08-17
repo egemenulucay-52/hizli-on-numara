@@ -1,20 +1,42 @@
 import pandas as pd
 import os
-import itertools
-from collections import Counter
-from datetime import datetime
+
+from analiz_motoru import (
+    blok_analizi,
+    ikili_frekans_farki,
+    kombinasyon_ozeti,
+    son_basamak_analizi,
+)
+from veri_modeli import (
+    SAYI_KOLONLARI,
+    cekilisleri_sirala,
+    veri_cercevesini_dogrula,
+    veri_cercevesini_normalize_et,
+)
 
 CSV_DOSYASI = "hizli_on_numara.csv"
 RAPOR_MD = "grup_raporu.md"
 RAPOR_CSV = "grup_analizi.csv"
+
+
+def ilk_dolu_deger(satir, kolonlar, varsayilan="Bilinmiyor"):
+    for kolon in kolonlar:
+        deger = satir.get(kolon)
+        if pd.notna(deger) and str(deger).strip():
+            return str(deger)
+    return varsayilan
+
 
 def grup_analizini_calistir():
     if not os.path.exists(CSV_DOSYASI):
         print("⚠️ Ham veri dosyası bulunamadı!")
         return
 
-    df = pd.read_csv(CSV_DOSYASI)
-    sayi_kolonlari = [f"Sayi_{i}" for i in range(1, 21)]
+    df = pd.read_csv(CSV_DOSYASI, dtype={"CekilisNo": str})
+    df = veri_cercevesini_normalize_et(df)
+    veri_cercevesini_dogrula(df)
+    df = cekilisleri_sirala(df)
+    sayi_kolonlari = SAYI_KOLONLARI
     
     if len(df) < 5:
         print("⚠️ Yetersiz veri!")
@@ -22,101 +44,24 @@ def grup_analizini_calistir():
 
     # En taze çekiliş bilgileri
     son_cekilis_no = df.iloc[0]['CekilisNo']
-    son_cekilis_tarih = df.iloc[0].get('Tarih', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-    
-    # --- 1. MODELLER: ONLUK BLOK GRUPLARI ---
-    bloklar = {
-        "Grup_1_10": range(1, 11), "Grup_11_20": range(11, 21),
-        "Grup_21_30": range(21, 31), "Grup_31_40": range(31, 41),
-        "Grup_41_50": range(41, 51), "Grup_51_60": range(51, 61),
-        "Grup_61_70": range(61, 71), "Grup_71_80": range(71, 81)
-    }
-    
-    blok_rapor = []
-    son_5_uzunluk = min(5, len(df))
-    son_20_uzunluk = min(20, len(df))
-    for ad, aralik in bloklar.items():
-        s5_adet = df.head(son_5_uzunluk)[sayi_kolonlari].isin(aralik).sum().sum() / son_5_uzunluk
-        s20_adet = df.head(son_20_uzunluk)[sayi_kolonlari].isin(aralik).sum().sum() / son_20_uzunluk
-        durum = "🔥 YOĞUN" if s5_adet > 2.8 else ("❄️ KURAK (Aday)" if s5_adet < 2.1 else "⚖️ DENGELİ")
-        blok_rapor.append({"Grup": ad.replace("Grup_", ""), "Son 5 Tur Ort": round(s5_adet, 2), "Son 20 Tur Ort": round(s20_adet, 2), "Mevcut Durum": durum})
-    df_blok = pd.DataFrame(blok_rapor)
+    son_cekilis_tarih = ilk_dolu_deger(df.iloc[0], ["CekilisTarihi"])
+    if son_cekilis_tarih == "Bilinmiyor":
+        son_cekilis_tarih = ilk_dolu_deger(df.iloc[0], ["ToplanmaTarihi"])
+        zaman_etiketi = "CSV'deki Son Toplanma Zamanı"
+    else:
+        zaman_etiketi = "Son Çekiliş Zamanı"
 
-    # --- 2. MODEL: SON BASAMAK GRUPLARI ---
-    basamak_rapor = []
-    for b in range(10):
-        grup_sayilari = [x for x in range(1, 81) if x % 10 == b]
-        s5_b_adet = df.head(son_5_uzunluk)[sayi_kolonlari].isin(grup_sayilari).sum().sum() / son_5_uzunluk
-        s20_b_adet = df.head(son_20_uzunluk)[sayi_kolonlari].isin(grup_sayilari).sum().sum() / son_20_uzunluk
-        ivme = "📈 Yükselişte" if s5_b_adet > s20_b_adet else "📉 Düşüşte"
-        basamak_rapor.append({"Son Basamak": f"Sonu {b} Olanlar", "Son 5 Ort": round(s5_b_adet, 2), "Son 20 Ort": round(s20_b_adet, 2), "İvme": ivme})
-    df_basamak = pd.DataFrame(basamak_rapor).sort_values(by="Son 5 Ort", ascending=False)
-
-    # --- 3. MODEL: MAKRO KAÇLI KOMBİNASYONDA ORTAK ÇIKTILAR? (YENİ İSTEDİĞİN CANAVAR) ---
-    df_len = len(df)
-    long_horizon = min(150, df_len)
-    draws_150 = df.head(long_horizon)[sayi_kolonlari].values.astype(int)
-    
-    k_summary = []
-    # Altılı kombinasyonlar bilinçli olarak kapsam dışıdır.
-    for k in [2, 3, 4, 5]:
-        combo_counts = Counter()
-        for row in draws_150:
-            combos = itertools.combinations(sorted(row), k)
-            combo_counts.update(combos)
-            
-        total_unique = len(combo_counts)
-        repeated_2_plus = sum(1 for c, count in combo_counts.items() if count >= 2)
-        repeated_3_plus = sum(1 for c, count in combo_counts.items() if count >= 3)
-        max_repeat = max(combo_counts.values()) if combo_counts else 0
-        
-        k_summary.append({
-            "Grup Tipi": f"{k}'lı Ortak Gruplar",
-            "En Az 1 Kez Çıkan (Benzersiz)": total_unique,
-            "En Az 2 Kez Çıkan (Tekrarlayan)": repeated_2_plus,
-            "En Az 3 Kez Çıkan": repeated_3_plus,
-            "Maksimum Tekrar": max_repeat
-        })
-    df_k_summary = pd.DataFrame(k_summary)
-
-    # --- 4. MODEL: İKİLİ GRUPLARIN KISA-UZUN DÖNEM FREKANS FARKI ---
-    short_horizon = min(15, df_len)
-    def cete_frekansi_hesapla(data_slice):
-        counts = {}
-        for _, row in data_slice[sayi_kolonlari].iterrows():
-            nums = sorted(row.values.astype(int))
-            for idx, i in enumerate(nums):
-                for j in nums[idx+1:]:
-                    counts[(i, j)] = counts.get((i, j), 0) + 1
-        return counts
-
-    counts_total = cete_frekansi_hesapla(df.head(long_horizon))
-    counts_short = cete_frekansi_hesapla(df.head(short_horizon))
-    populer_ikililer = [pair for pair, count in counts_total.items() if count >= 4]
-    
-    cete_macd_rapor = []
-    for pair in populer_ikililer:
-        f_short = counts_short.get(pair, 0) / short_horizon
-        f_long = counts_total.get(pair, 0) / long_horizon
-        grup_macd = f_short - f_long
-        cete_macd_rapor.append({
-            "Grup": f"[{pair[0]} - {pair[1]}]",
-            "Son 15 Ort": round(f_short, 3),
-            "Son 150 Ort": round(f_long, 3),
-            "Frekans_Farki": round(grup_macd, 4),
-            "Toplam_Hit": counts_total.get(pair, 0)
-        })
-    df_cete_macd = pd.DataFrame(
-        cete_macd_rapor,
-        columns=["Grup", "Son 15 Ort", "Son 150 Ort", "Frekans_Farki", "Toplam_Hit"]
-    ).sort_values(by="Frekans_Farki", ascending=False).head(15)
+    df_blok = blok_analizi(df, sayi_kolonlari)
+    df_basamak = son_basamak_analizi(df, sayi_kolonlari)
+    df_k_summary = kombinasyon_ozeti(df, sayi_kolonlari)
+    df_cete_macd = ikili_frekans_farki(df, sayi_kolonlari)
 
     # --- CSV OLARAK YEDEKLE ---
     df_blok.to_csv(RAPOR_CSV, index=False)
     
     # --- GITHUB MARKDOWN RAPORU OLUŞTURMA ---
     md_content = f"""# 📊 Hızlı On Numara Grup Raporu
-> **CSV'deki Son Kayıt Zamanı:** {son_cekilis_tarih}
+> **{zaman_etiketi}:** {son_cekilis_tarih}
 > **Analiz Edilen Son Çekiliş No:** `{son_cekilis_no}`
 
 ---

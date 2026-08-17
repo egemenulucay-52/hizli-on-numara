@@ -27,7 +27,7 @@ jobs:
     - name: Python Kur
       uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: '3.12'
         cache: pip
         cache-dependency-path: requirements-bot.txt
 
@@ -35,9 +35,17 @@ jobs:
       run: pip install -r requirements-bot.txt
 
     - name: Botu Çalistir (Veri Cek)
-      run: python veri_cekici.py
+      id: veri
+      run: |
+        python veri_cekici.py
+        if git diff --quiet -- hizli_on_numara.csv; then
+          echo "degisti=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "degisti=true" >> "$GITHUB_OUTPUT"
+        fi
 
     - name: Isik Hizinda Grup Analiz Raporu Uret
+      if: steps.veri.outputs.degisti == 'true'
       run: python grup_analizi.py
 
     - name: Yeni Verileri GitHub'a Geri Kaydet

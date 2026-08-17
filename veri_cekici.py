@@ -9,7 +9,12 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
-from veri_modeli import SAYI_KOLONLARI, cekilisleri_sirala, veri_cercevesini_dogrula
+from veri_modeli import (
+    SAYI_KOLONLARI,
+    cekilisleri_sirala,
+    veri_cercevesini_dogrula,
+    veri_cercevesini_normalize_et,
+)
 
 CSV_DOSYASI = "hizli_on_numara.csv"
 ISTANBUL_SAAT_DILIMI = ZoneInfo("Europe/Istanbul")
@@ -17,6 +22,46 @@ ISTANBUL_SAAT_DILIMI = ZoneInfo("Europe/Istanbul")
 
 def istanbul_zamani():
     return datetime.now(ISTANBUL_SAAT_DILIMI)
+
+
+def ilk_deger(kayit, alanlar):
+    for alan in alanlar:
+        deger = kayit.get(alan)
+        if deger not in (None, ""):
+            return deger
+    return None
+
+
+def tarih_metinini_normalize_et(deger):
+    if deger in (None, ""):
+        return ""
+    try:
+        if isinstance(deger, (int, float)):
+            zaman = pd.to_datetime(deger, unit="ms", utc=True)
+        else:
+            zaman = pd.to_datetime(str(deger), dayfirst=True, errors="raise")
+        if zaman.tzinfo is None:
+            zaman = zaman.tz_localize(ISTANBUL_SAAT_DILIMI)
+        else:
+            zaman = zaman.tz_convert(ISTANBUL_SAAT_DILIMI)
+        return zaman.strftime("%Y-%m-%d %H:%M:%S")
+    except (TypeError, ValueError, OverflowError):
+        return ""
+
+
+def cekilis_zamanini_coz(kayit):
+    birlesik = ilk_deger(
+        kayit,
+        ["drawDateTime", "drawDatetime", "drawnAt", "drawnDateTime"],
+    )
+    if birlesik is not None:
+        return tarih_metinini_normalize_et(birlesik)
+
+    tarih = ilk_deger(kayit, ["drawDate", "drawnDate", "date"])
+    saat = ilk_deger(kayit, ["drawTime", "drawnTime"])
+    if tarih is not None and saat is not None:
+        return tarih_metinini_normalize_et(f"{tarih} {saat}")
+    return tarih_metinini_normalize_et(tarih)
 
 
 def mevcut_cekilisleri_oku():
@@ -37,11 +82,12 @@ def veri_tabanina_kaydet(yeni_eklenen_ler):
         
     yeni_df = pd.DataFrame(yeni_eklenen_ler)
     if os.path.exists(CSV_DOSYASI):
-        eski_df = pd.read_csv(CSV_DOSYASI)
+        eski_df = veri_cercevesini_normalize_et(pd.read_csv(CSV_DOSYASI))
         toplam_df = pd.concat([eski_df, yeni_df], ignore_index=True)
     else:
         toplam_df = yeni_df
-        
+
+    toplam_df = veri_cercevesini_normalize_et(toplam_df)
     toplam_df["CekilisNo"] = toplam_df["CekilisNo"].astype(str)
     toplam_df = toplam_df.drop_duplicates(subset=["CekilisNo"])
     toplam_df = cekilisleri_sirala(toplam_df)
@@ -87,11 +133,23 @@ def motor_1_api():
     
     for c in cekilisler:
         try:
-            c_no = str(c.get("drawId") or c.get("id") or c.get("cekilisNo") or "")
+            c_no = str(
+                c.get("drawnNr")
+                or c.get("drawId")
+                or c.get("id")
+                or c.get("cekilisNo")
+                or ""
+            )
             if not c_no:
                 continue
             
-            toplar = c.get("numbers") or c.get("result") or c.get("kazananSayilar")
+            toplar = (
+                c.get("drawNumbersOnNumaraL1")
+                or c.get("winningNumber")
+                or c.get("numbers")
+                or c.get("result")
+                or c.get("kazananSayilar")
+            )
             if not toplar or not isinstance(toplar, list): continue
             
             gecici_sayilar = [int(n) for n in toplar if str(n).isdigit() and 1 <= int(n) <= 80]
@@ -100,7 +158,11 @@ def motor_1_api():
                 if c_no in mevcut_cekilisler:
                     continue
                 gecici_sayilar.sort()
-                satir_verisi = {"Tarih": istanbul_zamani().strftime('%Y-%m-%d %H:%M:%S'), "CekilisNo": c_no}
+                satir_verisi = {
+                    "CekilisTarihi": cekilis_zamanini_coz(c),
+                    "ToplanmaTarihi": istanbul_zamani().strftime("%Y-%m-%d %H:%M:%S"),
+                    "CekilisNo": c_no,
+                }
                 for i, s in enumerate(gecici_sayilar, start=1):
                     satir_verisi[f"Sayi_{i}"] = s
                 yeni_eklenen_ler.append(satir_verisi)
@@ -208,8 +270,10 @@ def motor_2_stealth_selenium():
                             if c_no not in mevcut_cekilisler and not any(d["CekilisNo"] == c_no for d in yeni_eklenen_ler):
                                 gecici_sayilar = []
                                 j = i + 2
-                                
+                                cekilis_tarihi = ""
+
                                 if j < len(lines) and ("." in lines[j] or ":" in lines[j] or "-" in lines[j]):
+                                    cekilis_tarihi = tarih_metinini_normalize_et(lines[j])
                                     j += 1
                                 
                                 while j < len(lines) and "detaylar" not in lines[j].lower() and "çekiliş no" not in lines[j].lower():
@@ -221,7 +285,11 @@ def motor_2_stealth_selenium():
                                 
                                 if len(gecici_sayilar) == 20:
                                     gecici_sayilar.sort()
-                                    satir_verisi = {"Tarih": istanbul_zamani().strftime('%Y-%m-%d %H:%M:%S'), "CekilisNo": c_no}
+                                    satir_verisi = {
+                                        "CekilisTarihi": cekilis_tarihi,
+                                        "ToplanmaTarihi": istanbul_zamani().strftime("%Y-%m-%d %H:%M:%S"),
+                                        "CekilisNo": c_no,
+                                    }
                                     for idx, s in enumerate(gecici_sayilar, start=1):
                                         satir_verisi[f"Sayi_{idx}"] = s
                                     yeni_eklenen_ler.append(satir_verisi)

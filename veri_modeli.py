@@ -2,10 +2,25 @@ import pandas as pd
 
 
 SAYI_KOLONLARI = [f"Sayi_{i}" for i in range(1, 21)]
+ZAMAN_KOLONLARI = ["CekilisTarihi", "ToplanmaTarihi"]
+
+
+def veri_cercevesini_normalize_et(df):
+    sonuc = df.copy()
+    if "ToplanmaTarihi" not in sonuc.columns and "Tarih" in sonuc.columns:
+        sonuc = sonuc.rename(columns={"Tarih": "ToplanmaTarihi"})
+    if "CekilisTarihi" not in sonuc.columns:
+        sonuc["CekilisTarihi"] = pd.NA
+    if "ToplanmaTarihi" not in sonuc.columns:
+        sonuc["ToplanmaTarihi"] = pd.NA
+
+    ana_kolonlar = [*ZAMAN_KOLONLARI, "CekilisNo", *SAYI_KOLONLARI]
+    kalan_kolonlar = [kolon for kolon in sonuc.columns if kolon not in ana_kolonlar]
+    return sonuc[ana_kolonlar + kalan_kolonlar]
 
 
 def veri_cercevesini_dogrula(df):
-    gerekli_kolonlar = {"Tarih", "CekilisNo", *SAYI_KOLONLARI}
+    gerekli_kolonlar = {"CekilisNo", *SAYI_KOLONLARI}
     eksik_kolonlar = gerekli_kolonlar - set(df.columns)
     if eksik_kolonlar:
         raise ValueError(f"Eksik CSV kolonları: {sorted(eksik_kolonlar)}")

@@ -5,7 +5,13 @@ import plotly.express as px
 import os
 import hashlib
 import istatistik  # Matematik motorumuz bağlı
-from veri_modeli import SAYI_KOLONLARI, cekilisleri_sirala, veri_cercevesini_dogrula
+from analiz_motoru import cok_boyutlu_skorlar
+from veri_modeli import (
+    SAYI_KOLONLARI,
+    cekilisleri_sirala,
+    veri_cercevesini_dogrula,
+    veri_cercevesini_normalize_et,
+)
 
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="Hızlı On Numara İstatistik Paneli", layout="wide")
@@ -17,6 +23,7 @@ YEREL_CSV = "hizli_on_numara.csv"
 
 def csv_oku_ve_dogrula(kaynak):
     df_data = pd.read_csv(kaynak, dtype={"CekilisNo": str})
+    df_data = veri_cercevesini_normalize_et(df_data)
     veri_cercevesini_dogrula(df_data)
     df_data[SAYI_KOLONLARI] = df_data[SAYI_KOLONLARI].apply(pd.to_numeric)
     return cekilisleri_sirala(df_data)
@@ -75,54 +82,7 @@ else:
 
     @st.cache_data(ttl=60)
     def cached_skor_motoru(df_input):
-        df_len = len(df_input)
-        # 1. Kısa ve uzun dönem frekans farkı
-        short_len = min(15, df_len)
-        long_len = min(150, df_len)
-        short_freq = pd.Series(df_input.head(short_len)[sayi_kolonlari].values.flatten()).value_counts().reindex(range(1, 81), fill_value=0) / short_len
-        long_freq = pd.Series(df_input.head(long_len)[sayi_kolonlari].values.flatten()).value_counts().reindex(range(1, 81), fill_value=0) / long_len
-        macd_scores = short_freq - long_freq
-        
-        # 2. Birlikte Çıkma İlişki Ağları (Co-occurrence)
-        matrix_co = np.zeros((80, 80))
-        for _, row in df_input.head(100)[sayi_kolonlari].iterrows():
-            nums = row.values.astype(int) - 1
-            for i in nums:
-                for j in nums:
-                    if i != j: matrix_co[i, j] += 1
-        son_cekilis_nums = df_input.iloc[0][sayi_kolonlari].values.astype(int)
-        co_scores = np.zeros(80)
-        for n in son_cekilis_nums:
-            co_scores += matrix_co[:, n-1]
-            
-        # 3. Geçmiş frekansa göre mevcut gecikme skoru
-        poisson_scores = []
-        for num in range(1, 81):
-            appears = np.where((df_input[sayi_kolonlari] == num).any(axis=1))[0]
-            if len(appears) > 0:
-                curr_gap = float(appears[0])
-                lam = len(appears) / df_len
-                p_score = 1.0 - np.exp(-lam * curr_gap)
-            else: p_score = 1.0
-            poisson_scores.append(p_score)
-            
-        # 4. Bölge Yoğunluk Kilit Modeli (Zonal)
-        last_10 = df_input.head(10)
-        last_10_matrix = last_10[sayi_kolonlari].values.flatten()
-        zone_counts = pd.Series((last_10_matrix - 1) // 10).value_counts().reindex(range(8), fill_value=0)
-        expected_zone_count = len(last_10) * len(sayi_kolonlari) / 8
-        zonal_scores = []
-        for num in range(1, 81):
-            zone = (num - 1) // 10
-            zonal_scores.append(float(expected_zone_count - zone_counts[zone]))
-            
-        return pd.DataFrame({
-            "Sayı": range(1, 81),
-            "Frekans_Farki": macd_scores.values,
-            "Iliski_Agi_Skoru": co_scores,
-            "Gecikme_Skoru": poisson_scores,
-            "Bolge_Yogunluk_Eksigi": zonal_scores
-        })
+        return cok_boyutlu_skorlar(df_input, sayi_kolonlari)
     
     # Yeni motoru çalıştır ve matrisleri al
     df_skor = cached_skor_motoru(analiz_df)

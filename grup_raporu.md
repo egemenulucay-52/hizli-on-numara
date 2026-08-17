@@ -1,5 +1,5 @@
 # 📊 Hızlı On Numara Grup Raporu
-> **CSV'deki Son Kayıt Zamanı:** 2026-08-17 18:39:11
+> **CSV'deki Son Toplanma Zamanı:** 2026-08-17 18:39:11
 > **Analiz Edilen Son Çekiliş No:** `49665`
 
 ---

@@ -36,6 +36,13 @@ class VeriCekiciTestleri(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "20 benzersiz"):
             veri_cercevesini_dogrula(pd.DataFrame([satir]))
 
+    def test_resmi_tarih_alanlari_istanbul_zamanina_cevrilir(self):
+        kayit = {"drawDate": "17.08.2026", "drawTime": "18:39"}
+
+        sonuc = veri_cekici.cekilis_zamanini_coz(kayit)
+
+        self.assertEqual(sonuc, "2026-08-17 18:39:00")
+
     @patch.object(veri_cekici, "motor_2_stealth_selenium")
     @patch.object(veri_cekici, "motor_1_api", side_effect=ValueError("boş API"))
     def test_api_bozulursa_seleniuma_gecilir(self, _api, selenium):
