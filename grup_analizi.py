@@ -111,7 +111,7 @@ def grup_analizini_calistir():
     
     # --- GITHUB MARKDOWN RAPORU OLUŞTURMA ---
     md_content = f"""# 📊 Hızlı On Numara Kuantum Grup Raporu
-> **Son Güncellenme:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} (TR)  
+> **Son Güncellenme:** {son_cekilis_tarih} (TR)  
 > **Analiz Edilen Son Çekiliş No:** `{son_cekilis_no}` | **Tarih:** `{son_cekilis_tarih}`
 
 ---
