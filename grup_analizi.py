@@ -86,7 +86,7 @@ def grup_analizini_calistir():
     md_content += """
 ---
 
-### 📐 3. İkili-Beşli Kombinasyon Kümelenmesi (Son 150 Çekiliş)
+### 📐 3. İkili-Dörtlü Kombinasyon Kümelenmesi (Son 150 Çekiliş)
 *Sayı gruplarının detayına inmeden önce, çekilen 20 sayı içinden kaçarlı ortak grupların doğduğunu ve bunların tekrarlanma istatistiklerini veren makro tablodur.*
 
 | Ortaklık Tipi | En Az 1 Kez Çıkan (Benzersiz) | En Az 2 Kez Çıkan (Tekrarlayan) | En Az 3 Kez Çıkan | Tarihsel En Yüksek Tekrar |

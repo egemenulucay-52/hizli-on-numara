@@ -32,11 +32,14 @@ class AnalizMotoruTestleri(unittest.TestCase):
             {"Sayı", "Frekans_Farki", "Iliski_Agi_Skoru", "Gecikme_Skoru", "Bolge_Yogunluk_Eksigi"},
         )
 
-    def test_kombinasyon_boyutlari_yalniz_iki_ile_bes_arasidir(self):
+    def test_kombinasyon_boyutlari_yalniz_iki_ile_dort_arasidir(self):
         sonuc = kombinasyon_ozeti(ornek_veri(), SAYI_KOLONLARI)
 
-        self.assertEqual(KOMBINASYON_BOYUTLARI, (2, 3, 4, 5))
-        self.assertEqual(sonuc["Grup Tipi"].tolist(), ["2'lı Ortak Gruplar", "3'lı Ortak Gruplar", "4'lı Ortak Gruplar", "5'lı Ortak Gruplar"])
+        self.assertEqual(KOMBINASYON_BOYUTLARI, (2, 3, 4))
+        self.assertEqual(
+            sonuc["Grup Tipi"].tolist(),
+            ["2'lı Ortak Gruplar", "3'lı Ortak Gruplar", "4'lı Ortak Gruplar"],
+        )
 
     def test_rapor_fonksiyonlari_bos_olmayan_tablo_dondurur(self):
         df = ornek_veri()
