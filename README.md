@@ -25,11 +25,13 @@ Milli Piyango API
 ```
 
 - `veri_modeli.py`: CSV şeması, doğrulama ve çekiliş sıralaması.
-- `analiz_motoru.py`: Panel ve rapor tarafından paylaşılan analizler.
+- `analysis/model.py`: 80/20 teorik olasılık modeli ve beklenen değerler.
+- `analysis/descriptive.py`: Frekans, blok ve son basamak betimleyici özetleri.
+- `analiz_motoru.py`: Geçiş sürecinde panel ve rapor tarafından paylaşılan eski analizler.
 - `istatistik.py`: Ki-kare, gecikme, geçiş matrisi ve sayı aralığı entropisi.
 - `veri_cekici.py`: API birincil kaynak, Selenium yedek kaynak.
 - `grup_analizi.py`: İkili–dörtlü kombinasyon ve grup raporu üretimi. Beşli ve altılı kombinasyon hesaplanmaz.
-- `panel.py`: Streamlit giriş dosyası.
+- `panel.py`: Yalnız seçilen bölümü hesaplayan hafif Streamlit giriş dosyası.
 
 ## Veri şeması
 
@@ -84,4 +86,4 @@ Streamlit uygulaması GitHub'daki `main` dalı güncellendiğinde yeniden dağı
 python -m unittest discover -s tests -v
 ```
 
-Testler; CSV doğrulamasını, API fallback akışını, zaman ayrıştırmasını, Markov yönünü, teorik 80/20 modelini, ortak analiz motorunu ve kombinasyon kapsamının 2–4 ile sınırlı kalmasını denetler.
+Testler; CSV doğrulamasını, API fallback akışını, zaman ayrıştırmasını, Markov yönünü, teorik 80/20 modelini, betimleyici analizleri, tüm Streamlit bölümlerinin açılışını ve kombinasyon kapsamının 2–4 ile sınırlı kalmasını denetler.
