@@ -1,0 +1,168 @@
+{
+  "protocol_version": "1.0.0",
+  "protocol_status": "selection_protocol_locked",
+  "approved_plan": "Plan B - contaminated tail öncesinde kronolojik 40/20/40",
+  "approved_by": "repository_owner",
+  "historical_data_cutoff": "49859",
+  "code_lock": {
+    "mechanism": "annotated_git_tag",
+    "selection_protocol_tag": "research-protocol-v1-selection-lock",
+    "base_commit": "5270bcf01a4ad6e43c44bfba06fc18ded1edec36",
+    "final_tag_pending": true
+  },
+  "data_lock": {
+    "source": "hizli_on_numara.csv",
+    "standard_draw_count": 17552,
+    "data_fingerprint": "a855a7371d12f0ada0a43b81e651161b50c2dbaf87ddbe975066f84fc2ea86bc",
+    "split_manifest": "artifacts/research_split_manifest.csv",
+    "split_manifest_hash_method": "sha256 of UTF-8 CSV with canonical LF line endings",
+    "split_manifest_sha256": "a0b242aa708f8f5f994068ca9bed093048efa1ace20e7748961ba280d98eac45"
+  },
+  "eligibility": {
+    "standard_id_regex": "^[0-9]{5,6}$",
+    "minimum_training_size": 500,
+    "target_rule": "target_draw_id == previous_available_draw_id + 1",
+    "random_split": false,
+    "date_based_split": false,
+    "date_limitation": "Gerçek çekiliş tarihi yalnızca son 168 kayıtta mevcut; bu nedenle kronolojik çekiliş sırası kullanılır."
+  },
+  "splits": {
+    "training_history": {
+      "row_count": 500,
+      "eligible_target_count": 0,
+      "first_draw": "30852",
+      "last_draw": "31442",
+      "outcome_access": "allowed_for_training"
+    },
+    "historical_development": {
+      "row_count": 5921,
+      "eligible_target_count": 5921,
+      "first_target": "31443",
+      "last_target": "38372",
+      "outcome_access": "allowed"
+    },
+    "historical_validation": {
+      "row_count": 2960,
+      "eligible_target_count": 2960,
+      "first_target": "38375",
+      "last_target": "41814",
+      "outcome_access": "allowed_for_single_model_selection"
+    },
+    "retrospective_locked_candidate": {
+      "row_count": 5922,
+      "eligible_target_count": 5922,
+      "first_target": "41815",
+      "last_target": "48701",
+      "outcome_access": "locked_do_not_evaluate"
+    },
+    "historical_contaminated": {
+      "row_count": 1000,
+      "eligible_target_count": 1000,
+      "first_target": "48702",
+      "last_target": "49859",
+      "outcome_access": "exploratory_only"
+    },
+    "ineligible_nonconsecutive": {
+      "row_count": 1249,
+      "eligible_target_count": 0,
+      "outcome_access": "not_an_evaluation_target"
+    }
+  },
+  "contamination": {
+    "known_evaluated_artifact": "artifacts/research_backtest_results.csv",
+    "known_evaluated_target_count": 1000,
+    "first_target": "48702",
+    "last_target": "49859",
+    "confirmatory_use": false
+  },
+  "model_lock": {
+    "status": "pending_validation",
+    "max_confirmatory_models": 1,
+    "selection_rule": "Development aşamasında yöntem geliştirilir; validation birincil sonlanım noktasına göre tam bir model seçer. Eşitlikte sırasıyla Hit>=4/6, ardından daha düşük model karmaşıklığı kullanılır.",
+    "posthoc_warning": "M2 ve M4-F dahil önceki kazananlar otomatik olarak confirmatory model değildir.",
+    "ensemble_v2_enabled": false,
+    "model_registry": [
+      "M1",
+      "M2",
+      "M3",
+      "M4-A",
+      "M4-B",
+      "M4-C",
+      "M4-D",
+      "M4-E",
+      "M4-F",
+      "M5",
+      "M6",
+      "Ensemble",
+      "M7",
+      "M8",
+      "M9",
+      "M10"
+    ]
+  },
+  "frozen_configuration": {
+    "analysis_config_hash": "b23bbeaca4e6e07441b8420d756d96f7d41aee3c0a3d24641743389459ad2638",
+    "research_config_hash": "90c2d5fdc1da5153837e300db529492e631fad5fe6838a16d058b3902db9df98",
+    "analysis_version": "1.0.0",
+    "research_version": "2.0.0"
+  },
+  "endpoints": {
+    "primary": {
+      "name": "Mean Hit@6",
+      "definition": "Seçilen tek modelin altı sayılık kümesindeki ortalama isabet sayısı.",
+      "random_expectation": 1.5
+    },
+    "key_secondary": [
+      {
+        "name": "Hit>=4/6",
+        "definition": "Altı sayılık seçimde en az dört isabet oranı."
+      },
+      {
+        "name": "NearPerfect>=5/6",
+        "definition": "Altı sayılık seçimde en az beş isabet oranı."
+      }
+    ],
+    "exploratory": [
+      "Exact4/4",
+      "Exact5/5",
+      "Exact6/6",
+      "pencere bazlı karşılaştırmalar",
+      "model ailesi alt grup analizleri"
+    ]
+  },
+  "statistics": {
+    "alternative": "greater",
+    "family_alpha": 0.05,
+    "confirmatory_model_count": 1,
+    "multiple_testing": "Validation ile tek model seçilir; iki modelle devam eden bir değişiklik yapılırsa açılmadan önce Holm düzeltmesi protokol ekiyle kaydedilir.",
+    "secondary_gatekeeping": "Ana sonlanım noktası reddedilirse anahtar ikincil sonlanım noktaları sıralı olarak test edilir.",
+    "confirmatory_windows": false,
+    "exploratory_fdr": "Benjamini-Hochberg"
+  },
+  "nested_validation": {
+    "development_inner_folds": 4,
+    "method": "expanding_window_chronological",
+    "purpose": "Hiperparametre ve yöntem geliştirme kararlarını dış validation bölümünden ayırmak."
+  },
+  "locked_holdout": {
+    "standard_tool_access": "denied",
+    "one_time_manual_open": true,
+    "results_visible_in_panel_before_open": false,
+    "open_condition": "Tek model, kod ve konfigürasyon final lock hash'i kaydedildikten sonra açık kullanıcı talimatı.",
+    "interpretation": "Mevcut model ailesi geliştirme sürecinde tüm geçmiş daha önce görüldüğü için yalnızca retrospective audit/backcast olarak yorumlanır; gerçek confirmatory kanıt değildir."
+  },
+  "prospective_live": {
+    "status": "waiting_for_final_model_lock",
+    "start_rule": "Final model lock sonrasında oluşturulan ve protocol_hash taşıyan ilk prediction_created olayı.",
+    "prelock_label": "protocol_v1_observational_prelock",
+    "confirmatory_label": "prospective_live_confirmatory",
+    "historical_results_pooled_with_prospective": false
+  },
+  "known_limitations": [
+    "M1-M6 ve araştırma modellerinin geliştirilmesi sırasında geçmiş verinin tamamına ilişkin sonuçlar daha önce görülmüştür.",
+    "Çekiliş tarihi çoğu tarihsel kayıtta bulunmadığından takvim etkileri doğrulanamaz.",
+    "Sayısal çekiliş numarası boşlukları takvim veya sistem boşluğu olabilir; eksik kayıt olarak varsayılmaz.",
+    "Kilitli tarihsel bölüm yalnızca geriye dönük dayanıklılık denetimidir; nihai doğrulama ileriye dönük canlı veridir."
+  ],
+  "protocol_hash": "d3af0784210d3126585a18e6612bfff088bd8a8a52887572d923200fde6124e1"
+}

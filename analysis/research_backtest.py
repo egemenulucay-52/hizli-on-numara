@@ -28,6 +28,7 @@ from analysis.m4_variants import calculate_m4_variants
 from analysis.ml_training import OnlineLogisticRanker
 from analysis.model_registry import M4_VARIANTS, RESEARCH_MODEL_NAMES
 from analysis.research_config import ResearchConfig
+from analysis.research_protocol import assert_target_ids_do_not_include_locked
 from analysis.research_state import ResearchState
 from veri_modeli import SAYI_KOLONLARI
 
@@ -215,7 +216,7 @@ def _new_m10(config, state=None):
     )
 
 
-def research_walk_forward_backtest(df, config=None, last=None):
+def research_walk_forward_backtest(df, config=None, last=None, target_ids=None):
     config = config or ResearchConfig()
     draws = chronological_standard_draws(df)
     numeric_ids = draws["CekilisNo"].astype(int).to_numpy()
@@ -226,7 +227,32 @@ def research_walk_forward_backtest(df, config=None, last=None):
     ]
     if not eligible:
         raise ValueError("Araştırma backtesti için ardışık hedef yok.")
-    selected = set(eligible[-(last or config.research_target_count) :])
+    eligible_by_id = {
+        str(draws.iloc[index]["CekilisNo"]): index for index in eligible
+    }
+    if target_ids is not None:
+        requested_ids = [str(target_id) for target_id in target_ids]
+        if len(requested_ids) != len(set(requested_ids)):
+            raise ValueError("target_ids tekrar eden hedef içeremez.")
+        unknown = sorted(set(requested_ids) - set(eligible_by_id), key=int)
+        if unknown:
+            raise ValueError(
+                "İstenen hedefler ardışık ve uygun değil: " + ", ".join(unknown[:5])
+            )
+        selected_indices = [eligible_by_id[target_id] for target_id in requested_ids]
+        if last is not None:
+            if last < 1:
+                raise ValueError("last pozitif bir tam sayı olmalıdır.")
+            selected_indices = selected_indices[-last:]
+    else:
+        selected_count = last or config.research_target_count
+        if selected_count < 1:
+            raise ValueError("Backtest hedef sayısı pozitif olmalıdır.")
+        selected_indices = eligible[-selected_count:]
+    assert_target_ids_do_not_include_locked(
+        draws.iloc[selected_indices]["CekilisNo"].astype(str).tolist()
+    )
+    selected = set(selected_indices)
 
     state = ResearchState(config)
     for index in range(config.minimum_training_size):

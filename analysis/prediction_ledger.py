@@ -144,9 +144,9 @@ def latest_m10_state(events, fallback_state):
 
 def prediction_created_payload(
     *, target_draw, train_end_draw, models, research_version, config_hash, m10_state,
-    created_at=None,
+    created_at=None, protocol_metadata=None,
 ):
-    return {
+    payload = {
         "event_type": "prediction_created",
         "created_at": created_at or utc_now(),
         "target_draw": str(target_draw),
@@ -156,6 +156,9 @@ def prediction_created_payload(
         "m10_state": m10_state,
         "models": models,
     }
+    if protocol_metadata:
+        payload.update(protocol_metadata)
+    return payload
 
 
 def prediction_evaluated_payload(

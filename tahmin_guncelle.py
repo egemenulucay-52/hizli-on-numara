@@ -22,6 +22,7 @@ from analysis.research_backtest import (
     current_research_predictions,
 )
 from analysis.research_config import ResearchConfig
+from analysis.research_protocol import protocol_ledger_metadata
 from veri_modeli import (
     SAYI_KOLONLARI,
     cekilisleri_sirala,
@@ -61,6 +62,7 @@ def update_live_ledger(draws, ledger_path, historical_state, config=None):
         for _, row in draws.iterrows()
     }
     m10_state = latest_m10_state(events, historical_state)
+    protocol_metadata = protocol_ledger_metadata()
 
     for created in sorted(
         pending_predictions(events), key=lambda event: int(event["target_draw"])
@@ -104,6 +106,7 @@ def update_live_ledger(draws, ledger_path, historical_state, config=None):
                 research_version=config.research_version,
                 config_hash=config.config_hash,
                 m10_state=m10_state,
+                protocol_metadata=protocol_metadata,
             )
         )
 
