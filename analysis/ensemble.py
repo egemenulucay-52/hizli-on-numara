@@ -20,8 +20,17 @@ def robust_percentile_rank(values):
     if np.allclose(clipped, clipped[0]):
         return np.full(NUMBER_COUNT, 0.5)
 
-    ranks = pd.Series(clipped).rank(method="average").to_numpy(dtype=float)
-    return (ranks - 1.0) / (NUMBER_COUNT - 1.0)
+    order = np.argsort(clipped, kind="mergesort")
+    sorted_values = clipped[order]
+    _, starts, counts = np.unique(
+        sorted_values, return_index=True, return_counts=True
+    )
+    sorted_ranks = np.empty(NUMBER_COUNT, dtype=float)
+    for start, count in zip(starts, counts):
+        sorted_ranks[start : start + count] = start + (count - 1) / 2.0
+    ranks = np.empty(NUMBER_COUNT, dtype=float)
+    ranks[order] = sorted_ranks
+    return ranks / (NUMBER_COUNT - 1.0)
 
 
 def normalize_scores(raw_scores):

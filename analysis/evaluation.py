@@ -18,12 +18,12 @@ def evaluate_ranking(ranking, actual_numbers):
     }
 
 
-def summarize_backtest(results, last=None):
+def summarize_backtest(results, last=None, models=EVALUATED_MODELS):
     if results.empty:
         return pd.DataFrame()
     selected = results.tail(last) if last is not None else results
     rows = []
-    for model in EVALUATED_MODELS:
+    for model in models:
         row = {"Model": model, "Evaluation Count": len(selected)}
         for size in SELECTION_SIZES:
             values = selected[f"{model} Hit@{size}"]
@@ -37,11 +37,13 @@ def summarize_backtest(results, last=None):
     return pd.DataFrame(rows)
 
 
-def summarize_backtest_windows(results, windows=(25, 50, 100, 250)):
+def summarize_backtest_windows(
+    results, windows=(25, 50, 100, 250), models=EVALUATED_MODELS
+):
     """Aynı backtest için tüm geçmiş ve sabit son dönem özetlerini birleştirir."""
 
     summaries = []
-    all_history = summarize_backtest(results)
+    all_history = summarize_backtest(results, models=models)
     if not all_history.empty:
         all_history.insert(0, "Window", "All")
         summaries.append(all_history)
@@ -49,7 +51,7 @@ def summarize_backtest_windows(results, windows=(25, 50, 100, 250)):
     for window in windows:
         if window > len(results):
             continue
-        summary = summarize_backtest(results, last=window)
+        summary = summarize_backtest(results, last=window, models=models)
         summary.insert(0, "Window", f"Last {window}")
         summaries.append(summary)
     return pd.concat(summaries, ignore_index=True) if summaries else pd.DataFrame()

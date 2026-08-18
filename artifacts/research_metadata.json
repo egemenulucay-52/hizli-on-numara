@@ -1,0 +1,38 @@
+{
+  "generated_at": "2026-08-18T16:39:57.403974+00:00",
+  "data_fingerprint": "553f7b6a80d50d4de6a22161eef08f19c82e57797be2fb6c7c2718e4627188d7",
+  "research_config": {
+    "research_version": "2.0.0",
+    "minimum_training_size": 500,
+    "decay_half_life": 100.0,
+    "bayesian_prior_strength": 40.0,
+    "significant_min_support": 30,
+    "significant_z_threshold": 3.5,
+    "multi_lag_weights": [
+      1.0,
+      0.6,
+      0.35
+    ],
+    "candidate_pool_size": 15,
+    "beam_width": 50,
+    "triple_min_support": 3,
+    "relation_clip": 4.0,
+    "m10_learning_rate": 0.12,
+    "m10_l2": 0.01,
+    "m10_update_interval": 10,
+    "research_target_count": 1000,
+    "joint_weights": {
+      "individual": 0.25,
+      "pair": 0.15,
+      "triple": 0.15,
+      "conditional": 0.15,
+      "structural": 0.1,
+      "bayesian": 0.2
+    }
+  },
+  "research_config_hash": "90c2d5fdc1da5153837e300db529492e631fad5fe6838a16d058b3902db9df98",
+  "evaluation_count": 1000,
+  "last_target": "49853",
+  "historical_only": true,
+  "ensemble_v2_enabled": false
+}
