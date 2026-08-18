@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-18T16:39:57.403974+00:00",
-  "data_fingerprint": "553f7b6a80d50d4de6a22161eef08f19c82e57797be2fb6c7c2718e4627188d7",
+  "generated_at": "2026-08-18T16:52:35.028288+00:00",
+  "data_fingerprint": "a855a7371d12f0ada0a43b81e651161b50c2dbaf87ddbe975066f84fc2ea86bc",
   "research_config": {
     "research_version": "2.0.0",
     "minimum_training_size": 500,
@@ -32,7 +32,7 @@
   },
   "research_config_hash": "90c2d5fdc1da5153837e300db529492e631fad5fe6838a16d058b3902db9df98",
   "evaluation_count": 1000,
-  "last_target": "49853",
+  "last_target": "49859",
   "historical_only": true,
   "ensemble_v2_enabled": false
 }
