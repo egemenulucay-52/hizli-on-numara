@@ -6,6 +6,7 @@ import pandas as pd
 from analysis.backtest import walk_forward_backtest
 from analysis.config import AnalysisConfig
 from analysis.evaluation import summarize_backtest_windows
+from analysis.tail_metrics import summarize_tail_metrics
 from veri_modeli import veri_cercevesini_normalize_et
 
 
@@ -16,6 +17,7 @@ def parse_args():
     parser.add_argument("--input", default="hizli_on_numara.csv")
     parser.add_argument("--output", default="artifacts/backtest_results.csv")
     parser.add_argument("--summary", default="artifacts/backtest_summary.csv")
+    parser.add_argument("--tail-summary", default="artifacts/backtest_tail_summary.csv")
     parser.add_argument(
         "--last",
         type=int,
@@ -39,10 +41,13 @@ def main():
 
     output_path = Path(args.output)
     summary_path = Path(args.summary)
+    tail_summary_path = Path(args.tail_summary)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     summary_path.parent.mkdir(parents=True, exist_ok=True)
+    tail_summary_path.parent.mkdir(parents=True, exist_ok=True)
     results.to_csv(output_path, index=False)
     summarize_backtest_windows(results).to_csv(summary_path, index=False)
+    summarize_tail_metrics(results).to_csv(tail_summary_path, index=False)
     print(f"{len(results)} walk-forward değerlendirmesi yazıldı: {output_path}")
 
 
