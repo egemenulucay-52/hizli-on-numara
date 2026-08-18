@@ -5,11 +5,15 @@ on:
     paths:
       - "**.py"
       - "requirements*.txt"
+      - "protocols/**"
+      - "artifacts/research_split_manifest.csv"
       - ".github/workflows/ci.yml"
   pull_request:
     paths:
       - "**.py"
       - "requirements*.txt"
+      - "protocols/**"
+      - "artifacts/research_split_manifest.csv"
       - ".github/workflows/ci.yml"
 
 permissions:

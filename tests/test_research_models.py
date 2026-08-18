@@ -99,6 +99,23 @@ class ResearchModelTests(unittest.TestCase):
             self.assertIn(f"{model} Hit@6", run.results.columns)
             self.assertIn(f"{model} Set@6", run.results.columns)
 
+    def test_exact_target_ids_are_respected(self):
+        frame = generated_frame(12)
+        run = research_walk_forward_backtest(
+            frame,
+            config=self.config(),
+            target_ids=("10007", "10009"),
+        )
+        self.assertEqual(run.results["Target Draw"].tolist(), ["10007", "10009"])
+
+    def test_ineligible_target_id_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "uygun değil"):
+            research_walk_forward_backtest(
+                generated_frame(12),
+                config=self.config(),
+                target_ids=("10003",),
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

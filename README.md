@@ -33,8 +33,10 @@ Milli Piyango API
 - `analysis/benchmark.py`: Exact random Hit@N beklentileri.
 - `analysis/tail_metrics.py`: Exact/NearPerfect oranları, güven aralıkları,
   binom/Monte Carlo kontrolleri ve çoklu test düzeltmesi.
-- `analysis/research_backtest.py`: M1–M10 için son 1.000 ardışık hedefte
-  look-ahead korumalı araştırma turnuvası.
+- `analysis/research_backtest.py`: M1–M10 için kesin hedef listesi kabul eden,
+  look-ahead ve kilitli bölüm erişim korumalı araştırma motoru.
+- `analysis/research_protocol.py`: Research Protocol v1 hash doğrulaması,
+  kronolojik split manifesti ve locked holdout erişim koruması.
 - `analysis/prediction_ledger.py`: Canlı tahminlerin eklemeli ve SHA-256
   zincirli olay günlüğü.
 - `analiz_motoru.py`: Geçiş sürecinde panel ve rapor tarafından paylaşılan eski analizler.
@@ -59,6 +61,24 @@ Nearly Perfect eşikleri rastgele hypergeometric benchmark, güven aralığı ve
 q-value ile birlikte raporlanır. Mevcut araştırma sonucunda istatistiksel olarak
 desteklenen tarihsel avantaj yoktur; Ensemble v2 yeterli canlı gözlem oluşana
 kadar kapalıdır.
+
+## Research Protocol v1
+
+Protokol, geçmiş hedefleri kronolojik ve değiştirilemez bir manifestle ayırır:
+
+| Bölüm | Uygun hedef | Kullanım |
+| --- | ---: | --- |
+| Development | 5.921 | Yöntem geliştirme |
+| Validation | 2.960 | Tam bir final model seçme |
+| Retrospective locked candidate | 5.922 | Standart araçlara kapalı; sonuç üretilmez |
+| Bilinen kontamine kuyruk | 1.000 | Yalnız keşifsel panel ve geçmiş karşılaştırma |
+
+`protocols/research_protocol_v1.json` protokol kararlarını, konfigürasyon
+hash'lerini ve birincil ölçüt olan Mean Hit@6'yı sabitler.
+`artifacts/research_split_manifest.csv` her çekilişin fazını taşır. Mevcut
+modeller geliştirilirken geçmişin tamamı daha önce görüldüğü için kilitli bölüm
+yalnız retrospective audit/backcast sayılır; gerçek confirmatory değerlendirme,
+final model kilidinden sonraki canlı tahminlerle başlayacaktır.
 
 ## Veri şeması
 
@@ -86,21 +106,20 @@ python -m pip install -r requirements-bot.txt
 python veri_cekici.py
 ```
 
-Tarihsel walk-forward sonuçlarını yeniden üretmek için:
+M1–M10 araştırma sonuçlarını izinli bir bölüm için yeniden üretmek için:
 
 ```bash
-python backtest_uret.py --last 0 --minimum-training 500
+python research_backtest_uret.py --split development
+python research_backtest_uret.py --split validation
+python research_backtest_uret.py --split contaminated
 ```
 
-Çıktılar `artifacts/backtest_results.csv` ve `artifacts/backtest_summary.csv`
-dosyalarına yazılır. Yalnız ardışık `N → N+1` hedefleri değerlendirilir; eksik
-çekilişlerin üzerinden geçiş veya geriye dönük canlı tahmin üretilmez.
-
-M1–M10 araştırma turnuvasını yeniden üretmek için:
-
-```bash
-python research_backtest_uret.py --last 1000
-```
+Development ve validation çıktıları sırasıyla
+`artifacts/protocol_v1/development` ve `artifacts/protocol_v1/validation`
+altına yazılır. Kontamine kuyruk mevcut panel artefaktlarını günceller.
+`retrospective_locked_candidate` bilinçli olarak komut seçeneklerinde yoktur;
+genel backtest motoru da bu hedef kimliklerini reddeder. Yalnız ardışık
+`N → N+1` hedefleri değerlendirilir.
 
 Canlı günlüğü yerelde idempotent olarak güncellemek için:
 
@@ -112,6 +131,8 @@ Komut önce sonucu gelen bekleyen tahmini değerlendirir, ardından yalnız mevc
 son çekilişin bir sonrasına tahmin yazar. Kaçırılmış geçmiş çekilişlere tahmin
 eklemez. Günlük `artifacts/prediction_ledger.jsonl` dosyasındadır; her olay bir
 önceki olayın özetini taşıdığı için geçmiş kayıt değişiklikleri doğrulanabilir.
+Final model kilitlenene kadar yeni kayıtlar
+`protocol_v1_observational_prelock` olarak etiketlenir ve confirmatory sayılmaz.
 
 ## Streamlit Community Cloud
 

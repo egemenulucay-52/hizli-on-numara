@@ -67,6 +67,25 @@ class PredictionLedgerTests(unittest.TestCase):
             seal_event(payload, GENESIS_HASH), seal_event(payload, GENESIS_HASH)
         )
 
+    def test_protocol_metadata_is_preserved(self):
+        payload = prediction_created_payload(
+            target_draw="10001",
+            train_end_draw="10000",
+            models={},
+            research_version="test",
+            config_hash="abc",
+            m10_state={},
+            protocol_metadata={
+                "research_protocol_version": "1.0.0",
+                "research_protocol_hash": "protocol-hash",
+                "evaluation_phase": "protocol_v1_observational_prelock",
+            },
+        )
+        self.assertEqual(
+            payload["evaluation_phase"], "protocol_v1_observational_prelock"
+        )
+        self.assertEqual(payload["research_protocol_hash"], "protocol-hash")
+
     def test_live_entrypoint_imports_without_scipy(self):
         root = Path(__file__).resolve().parents[1]
         guard = (
