@@ -4,6 +4,8 @@ import pandas as pd
 import streamlit as st
 
 from analysis.config import AnalysisConfig, MODEL_NAMES
+from analysis.model_registry import MODEL_DESCRIPTIONS, RESEARCH_MODEL_NAMES
+from analysis.prediction_ledger import pending_predictions, read_ledger
 from analysis.descriptive import (
     block_summary,
     ending_digit_summary,
@@ -31,6 +33,11 @@ GITHUB_CSV_URL = (
 LOCAL_CSV = "hizli_on_numara.csv"
 BACKTEST_RESULTS = "artifacts/backtest_results.csv"
 BACKTEST_SUMMARY = "artifacts/backtest_summary.csv"
+BACKTEST_TAIL_SUMMARY = "artifacts/backtest_tail_summary.csv"
+RESEARCH_RESULTS = "artifacts/research_backtest_results.csv"
+RESEARCH_SUMMARY = "artifacts/research_backtest_summary.csv"
+RESEARCH_TAIL_SUMMARY = "artifacts/research_tail_summary.csv"
+PREDICTION_LEDGER = "artifacts/prediction_ledger.jsonl"
 
 
 def read_and_validate_csv(source):
@@ -63,6 +70,24 @@ def load_backtest_artifacts(results_path, results_mtime, summary_path, summary_m
         return pd.read_csv(results_path), pd.read_csv(summary_path)
     except (OSError, pd.errors.ParserError):
         return pd.DataFrame(), pd.DataFrame()
+
+
+@st.cache_data(show_spinner=False)
+def load_tail_summary(path, modified_time):
+    del modified_time
+    try:
+        return pd.read_csv(path)
+    except (OSError, pd.errors.ParserError):
+        return pd.DataFrame()
+
+
+@st.cache_data(show_spinner=False)
+def load_prediction_events(path, modified_time):
+    del modified_time
+    try:
+        return read_ledger(path), ""
+    except (OSError, ValueError) as error:
+        return [], str(error)
 
 
 @st.cache_data(ttl=600, show_spinner=False)
@@ -135,6 +160,7 @@ page = st.sidebar.radio(
         "Genel Bakış",
         "Keşifsel Analiz",
         "İkili ve Kombinasyonlar",
+        "Canlı Tahmin",
         "Model Karşılaştırma",
         "İstatistiksel Kontrol",
         "Veri",
@@ -250,46 +276,183 @@ elif page == "İkili ve Kombinasyonlar":
     st.subheader("2–4 kombinasyon tekrar özeti")
     st.dataframe(combination_table, hide_index=True, width="stretch")
 
-elif page == "Model Karşılaştırma":
-    results_mtime = (
-        os.path.getmtime(BACKTEST_RESULTS) if os.path.exists(BACKTEST_RESULTS) else None
+elif page == "Canlı Tahmin":
+    ledger_mtime = (
+        os.path.getmtime(PREDICTION_LEDGER)
+        if os.path.exists(PREDICTION_LEDGER)
+        else None
     )
-    summary_mtime = (
-        os.path.getmtime(BACKTEST_SUMMARY) if os.path.exists(BACKTEST_SUMMARY) else None
+    events, ledger_error = load_prediction_events(PREDICTION_LEDGER, ledger_mtime)
+    st.subheader("Canlı tahmin günlüğü")
+    st.caption(
+        "Bu bölüm yalnız önceden kaydedilmiş, zaman damgalı tahminleri gösterir. "
+        "Tarihsel backtest ve canlı sonuçlar kesin olarak ayrı tutulur."
+    )
+    if ledger_error:
+        st.error(f"Tahmin günlüğü doğrulanamadı: {ledger_error}")
+        st.stop()
+    created = [event for event in events if event.get("event_type") == "prediction_created"]
+    evaluated = [
+        event for event in events if event.get("event_type") == "prediction_evaluated"
+    ]
+    if not created:
+        st.info("Henüz zaman damgalı canlı tahmin oluşturulmadı.")
+        st.stop()
+
+    pending = pending_predictions(events)
+    displayed = pending[-1] if pending else created[-1]
+    status = "Sonuç bekleniyor" if displayed in pending else "Değerlendirildi"
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Hedef çekiliş", displayed["target_draw"])
+    col2.metric("Eğitim sonu", displayed["train_end_draw"])
+    col3.metric("Durum", status)
+    col4.metric("Canlı değerlendirme", len(evaluated))
+
+    research_results_mtime = (
+        os.path.getmtime(RESEARCH_SUMMARY) if os.path.exists(RESEARCH_SUMMARY) else None
+    )
+    _, research_summary = load_backtest_artifacts(
+        RESEARCH_RESULTS,
+        os.path.getmtime(RESEARCH_RESULTS) if os.path.exists(RESEARCH_RESULTS) else None,
+        RESEARCH_SUMMARY,
+        research_results_mtime,
+    )
+    reference_model = "M4-F"
+    if not research_summary.empty:
+        historical_all = research_summary[research_summary["Window"] == "All"]
+        if not historical_all.empty:
+            reference_model = historical_all.sort_values(
+                ["Mean Hit@6", "Model"], ascending=[False, True]
+            ).iloc[0]["Model"]
+
+    st.info(
+        f"Tarihsel ortalama Hit@6 lideri **{reference_model}** yalnız görüntüleme "
+        "referansıdır; istatistiksel olarak desteklenen bir üstünlük bulunmadı."
+    )
+    reference = displayed["models"].get(reference_model)
+    if reference:
+        st.markdown(f"**{reference_model} · kayıtlı Set@6**")
+        st.markdown(number_badges(reference["set_at_6"]), unsafe_allow_html=True)
+
+    with st.expander("Tüm kayıtlı model tahminleri", expanded=True):
+        prediction_rows = []
+        for model in RESEARCH_MODEL_NAMES:
+            selections = displayed["models"].get(model)
+            if selections is None:
+                continue
+            prediction_rows.append(
+                {
+                    "Model": model,
+                    "Set@4": " ".join(map(str, selections["set_at_4"])),
+                    "Set@5": " ".join(map(str, selections["set_at_5"])),
+                    "Set@6": " ".join(map(str, selections["set_at_6"])),
+                    "Yaklaşım": MODEL_DESCRIPTIONS[model],
+                }
+            )
+        st.dataframe(pd.DataFrame(prediction_rows), hide_index=True, width="stretch")
+
+    st.subheader("Canlı değerlendirme geçmişi")
+    if not evaluated:
+        st.caption(
+            "İlk hedef henüz sonuçlanmadı. Bu alan sonuç geldikten sonra canlı "
+            "Hit@4/5/6 değerlerini gösterecek."
+        )
+    else:
+        live_model = st.selectbox(
+            "Canlı performansı gösterilecek model",
+            list(RESEARCH_MODEL_NAMES),
+            index=list(RESEARCH_MODEL_NAMES).index(reference_model),
+        )
+        live_rows = []
+        for event in evaluated:
+            result = event["results"].get(live_model)
+            if result is None:
+                continue
+            live_rows.append(
+                {
+                    "Hedef": event["target_draw"],
+                    "Gerçek sayılar": " ".join(map(str, event["actual_numbers"])),
+                    "Hit@4": result["hit_at_4"],
+                    "Hit@5": result["hit_at_5"],
+                    "Hit@6": result["hit_at_6"],
+                    "Exact 6/6": result["exact_6"],
+                    "NearPerfect ≥5/6": result["nearperfect_6"],
+                }
+            )
+        st.dataframe(pd.DataFrame(live_rows), hide_index=True, width="stretch")
+
+    with st.expander("Günlük bütünlüğü"):
+        st.write(
+            f"{len(events)} olay · zincir doğrulandı · son olay özeti "
+            f"`{events[-1]['event_hash']}`"
+        )
+        st.caption(
+            "Olaylar önceki olayın SHA-256 özetini taşır. Kayıt silme veya geçmiş "
+            "tahmini değiştirme zincir doğrulamasını bozar."
+        )
+
+elif page == "Model Karşılaştırma":
+    comparison_source = st.sidebar.selectbox(
+        "Karşılaştırma kaynağı",
+        ["M1–M10 Araştırma Turnuvası", "M1–M6 Tam Tarihsel Backtest"],
+    )
+    is_research = comparison_source.startswith("M1–M10")
+    results_path = RESEARCH_RESULTS if is_research else BACKTEST_RESULTS
+    summary_path = RESEARCH_SUMMARY if is_research else BACKTEST_SUMMARY
+    tail_path = RESEARCH_TAIL_SUMMARY if is_research else BACKTEST_TAIL_SUMMARY
+    results_mtime = os.path.getmtime(results_path) if os.path.exists(results_path) else None
+    summary_mtime = os.path.getmtime(summary_path) if os.path.exists(summary_path) else None
+    tail_mtime = (
+        os.path.getmtime(tail_path)
+        if os.path.exists(tail_path)
+        else None
     )
     backtest, backtest_summary = load_backtest_artifacts(
-        BACKTEST_RESULTS,
-        results_mtime,
-        BACKTEST_SUMMARY,
-        summary_mtime,
+        results_path, results_mtime, summary_path, summary_mtime
     )
+    tail_summary = load_tail_summary(tail_path, tail_mtime)
 
     st.subheader("Tarihsel walk-forward model karşılaştırması")
     st.caption(
-        "Her hedef çekiliş yalnız kendisinden önceki verilerle skorlandı. "
-        "Bu bölüm canlı tahmin performansı değildir ve altılı kombinasyon hesabı yapmaz."
+        "Her hedef yalnız önceki verilerle skorlandı. Historical Walk-Forward sonuçları "
+        "canlı performans değildir. Gösterilen setler doğrudan model çıktısıdır; "
+        "altılı kombinasyon uzayı taranmaz."
     )
-    if backtest.empty or backtest_summary.empty:
+    if backtest.empty or backtest_summary.empty or tail_summary.empty:
         st.warning("Önceden hesaplanmış backtest çıktısı bulunamadı.")
         st.stop()
 
     available_windows = backtest_summary["Window"].drop_duplicates().tolist()
-    default_window_index = (
-        available_windows.index("Last 250")
-        if "Last 250" in available_windows
-        else 0
-    )
     selected_window = st.sidebar.selectbox(
         "Performans penceresi",
         available_windows,
-        index=default_window_index,
+        index=available_windows.index("Last 250") if "Last 250" in available_windows else 0,
     )
-    selection_size = st.sidebar.selectbox("İsabet metriği", [4, 5, 6], index=2)
-    model_options = [*MODEL_NAMES, "Ensemble"]
+    primary_objective = st.sidebar.selectbox(
+        "Birincil hedef",
+        [
+            "Exact 6/6",
+            "NearPerfect 5+/6",
+            "Exact 5/5",
+            "NearPerfect 4+/5",
+            "Exact 4/4",
+            "NearPerfect 3+/4",
+            "Mean Hit@6",
+            "Mean Hit@5",
+            "Mean Hit@4",
+        ],
+    )
+    selection_size = int(primary_objective[-1])
+    model_options = list(RESEARCH_MODEL_NAMES) if is_research else [*MODEL_NAMES, "Ensemble"]
+    default_models = (
+        ["M4-F", "M7", "M8", "M9", "M10"]
+        if is_research
+        else ["M1", "M3", "M4", "Ensemble"]
+    )
     selected_models = st.sidebar.multiselect(
         "Karşılaştırılacak modeller",
         model_options,
-        default=["M1", "M3", "M4", "Ensemble"],
+        default=default_models,
     )
     if not selected_models:
         st.info("En az bir model seçin.")
@@ -298,30 +461,42 @@ elif page == "Model Karşılaştırma":
     ranking = backtest_summary[
         (backtest_summary["Window"] == selected_window)
         & (backtest_summary["Model"].isin(selected_models))
-    ][
-        [
-            "Model",
-            "Evaluation Count",
-            "Mean Hit@4",
-            "Mean Hit@5",
-            "Mean Hit@6",
-            "Lift@4",
-            "Lift@5",
-            "Lift@6",
-        ]
     ].copy()
-    ranking = ranking.sort_values(f"Lift@{selection_size}", ascending=False)
-    numeric_columns = ranking.select_dtypes(include="number").columns
-    ranking[numeric_columns] = ranking[numeric_columns].round(4)
-    st.dataframe(ranking, hide_index=True, width="stretch")
+    tail_window = tail_summary[
+        (tail_summary["Window"] == selected_window)
+        & (tail_summary["Model"].isin(selected_models))
+    ].copy()
 
-    best_lift = float(ranking[f"Lift@{selection_size}"].max())
-    if best_lift <= 1.0:
-        st.info("Bu pencerede random benchmarkı geçen kanıtlanmış tahmin avantajı yok.")
+    overview = ranking[["Model", "Evaluation Count", "Mean Hit@6", "Lift@6"]].copy()
+    for size in (4, 5, 6):
+        exact = tail_window[
+            (tail_window["Objective"] == "Exact")
+            & (tail_window["Selection Size"] == size)
+        ].set_index("Model")
+        near = tail_window[
+            (tail_window["Objective"] == "NearPerfect")
+            & (tail_window["Selection Size"] == size)
+        ].set_index("Model")
+        overview[f"Exact {size}/{size} Count"] = overview["Model"].map(exact["Observed Count"])
+        overview[f"Exact {size}/{size} Rate"] = overview["Model"].map(exact["Observed Rate"])
+        overview[f"Exact {size}/{size} Lift"] = overview["Model"].map(exact["Lift"])
+        overview[f"NearPerfect@{size} Rate"] = overview["Model"].map(near["Observed Rate"])
+    exact6 = tail_window[
+        (tail_window["Objective"] == "Exact")
+        & (tail_window["Selection Size"] == 6)
+    ].set_index("Model")
+    overview["Significance Status"] = overview["Model"].map(exact6["Evidence Status"])
+
+    if primary_objective.startswith("Mean Hit"):
+        overview = overview.sort_values(f"Mean Hit@{selection_size}", ascending=False)
     else:
-        st.warning(
-            "Bazı tarihsel lift değerleri 1'in üzerinde; anlamlılık testi tamamlanmadan "
-            "bu durum tahmin avantajı sayılmaz."
+        objective_name = "Exact" if primary_objective.startswith("Exact") else "NearPerfect"
+        objective_rows = tail_window[
+            (tail_window["Objective"] == objective_name)
+            & (tail_window["Selection Size"] == selection_size)
+        ][["Model", "Lift CI Low", "Lift"]]
+        overview = overview.merge(objective_rows, on="Model", how="left").sort_values(
+            ["Lift CI Low", "Lift"], ascending=False
         )
 
     window_row_count = {
@@ -331,7 +506,7 @@ elif page == "Model Karşılaştırma":
         "Last 100": 100,
         "Last 250": 250,
     }.get(selected_window, len(backtest))
-    chart_source = backtest.tail(min(window_row_count, len(backtest))).reset_index()
+    chart_source = backtest.tail(min(window_row_count, len(backtest))).reset_index(drop=True)
     rolling_period = min(50, len(chart_source))
     rolling = pd.DataFrame({"Evaluation": chart_source.index + 1})
     for model in selected_models:
@@ -339,60 +514,119 @@ elif page == "Model Karşılaştırma":
             rolling_period, min_periods=1
         ).mean()
     rolling["Random Benchmark"] = selection_size * 0.25
-    chart_rolling = rolling
-    if len(chart_rolling) > 2500:
-        sample_step = (len(chart_rolling) + 2499) // 2500
-        chart_rolling = chart_rolling.iloc[::sample_step]
-    st.subheader(f"Rolling Hit@{selection_size}")
-    st.caption(
-        f"Grafik {rolling_period} çekilişlik hareketli ortalamayı gösterir. "
-        "Uzun seriler yalnız çizim için en fazla 2.500 noktaya seyreltilir."
-    )
-    st.line_chart(chart_rolling.set_index("Evaluation"), height=360)
+    if len(rolling) > 2500:
+        rolling = rolling.iloc[::((len(rolling) + 2499) // 2500)]
 
-    descriptions = {
+    tabs = st.tabs(
+        ["Araştırma Özeti", "Perfect Hit", "Nearly Perfect", "Tail Grafikleri", "Mean Hit ve Detay"]
+    )
+    with tabs[0]:
+        st.subheader("Model seçim dashboardu")
+        st.caption(
+            "Sıralama seçilen hedefte lift alt güven sınırını önceleyerek tekil şanslı "
+            "sonuçların liderliği ele geçirmesini sınırlar."
+        )
+        numeric = overview.select_dtypes(include="number").columns
+        overview[numeric] = overview[numeric].round(6)
+        st.dataframe(overview, hide_index=True, width="stretch")
+        if not (tail_window["Evidence Status"] == "Statistically supported historical signal").any():
+            st.info("Seçilen pencerede istatistiksel olarak desteklenen tarihsel avantaj yok.")
+
+    leaderboard_columns = [
+        "Model", "Evaluation Count", "Observed Count", "Expected Count",
+        "Observed Rate", "Random Rate", "Lift", "Lift CI Low", "Lift CI High",
+        "Exact p-value", "q-value", "Evidence Status",
+    ]
+    with tabs[1]:
+        st.subheader("Perfect Hit Leaderboard")
+        for size, tab in zip((4, 5, 6), st.tabs(["4/4", "5/5", "6/6"])):
+            with tab:
+                table = tail_window[
+                    (tail_window["Objective"] == "Exact")
+                    & (tail_window["Selection Size"] == size)
+                ][leaderboard_columns].sort_values(["Lift CI Low", "Lift"], ascending=False)
+                st.dataframe(table.round(6), hide_index=True, width="stretch")
+
+    with tabs[2]:
+        st.subheader("Nearly Perfect Leaderboard")
+        for size, tab in zip((4, 5, 6), st.tabs(["≥3/4", "≥4/5", "≥5/6"])):
+            with tab:
+                table = tail_window[
+                    (tail_window["Objective"] == "NearPerfect")
+                    & (tail_window["Selection Size"] == size)
+                ][leaderboard_columns].sort_values(["Lift CI Low", "Lift"], ascending=False)
+                st.dataframe(table.round(6), hide_index=True, width="stretch")
+
+    with tabs[3]:
+        st.subheader(f"Rolling NearPerfect@{selection_size} Rate")
+        tail_chart = pd.DataFrame({"Evaluation": chart_source.index + 1})
+        for model in selected_models:
+            tail_chart[model] = (
+                chart_source[f"{model} Hit@{selection_size}"] >= selection_size - 1
+            ).rolling(rolling_period, min_periods=1).mean()
+        near_random = tail_window[
+            (tail_window["Objective"] == "NearPerfect")
+            & (tail_window["Selection Size"] == selection_size)
+        ].iloc[0]["Random Rate"]
+        tail_chart["Random Benchmark"] = near_random
+        if len(tail_chart) > 2500:
+            tail_chart = tail_chart.iloc[::((len(tail_chart) + 2499) // 2500)]
+        st.line_chart(tail_chart.set_index("Evaluation"), height=330)
+
+        st.subheader(f"Cumulative Exact {selection_size}/{selection_size}")
+        cumulative = pd.DataFrame({"Evaluation": chart_source.index + 1})
+        for model in selected_models:
+            cumulative[model] = (
+                chart_source[f"{model} Hit@{selection_size}"] == selection_size
+            ).cumsum()
+        exact_random = tail_window[
+            (tail_window["Objective"] == "Exact")
+            & (tail_window["Selection Size"] == selection_size)
+        ].iloc[0]["Random Rate"]
+        cumulative["Random Expected"] = cumulative["Evaluation"] * exact_random
+        if len(cumulative) > 2500:
+            cumulative = cumulative.iloc[::((len(cumulative) + 2499) // 2500)]
+        st.line_chart(cumulative.set_index("Evaluation"), height=330)
+
+    baseline_descriptions = {
         "M1": "Kısa ve uzun dönem görülme oranı farkı.",
         "M2": "Teorik %25 görülme oranından standartlaştırılmış sapma.",
         "M3": "Son çekilişteki sayılarla beklenene göre pair ilişkisi.",
         "M4": "Geçmişten geleceğe koşullu transition sapması.",
         "M5": "Gambler's fallacy kullanmayan yakınlık/recency skoru.",
         "M6": "Onluk blok ve son basamak yoğunluğu skoru.",
-        "Ensemble": "Sabit ağırlıklı M1–M6 birleşimi.",
+        "Ensemble": "Sabit ağırlıklı M1-M6 birleşimi.",
     }
-    detail_model = st.selectbox("Model detayı", selected_models)
-    st.write(descriptions[detail_model])
-    config = AnalysisConfig()
-    left, right, third = st.columns(3)
-    left.metric(
-        "Son Top 6",
-        backtest.iloc[-1][f"{detail_model} Top6"],
-    )
-    detail_summary = ranking[ranking["Model"] == detail_model].iloc[0]
-    right.metric(
-        f"Mean Hit@{selection_size}",
-        f"{detail_summary[f'Mean Hit@{selection_size}']:.3f}",
-    )
-    third.metric(
-        f"Lift@{selection_size}",
-        f"{detail_summary[f'Lift@{selection_size}']:.3f}",
-    )
-    st.caption(
-        f"Strategy {config.strategy_version} · Config {config.config_version} · "
-        f"minimum eğitim {config.minimum_training_size}"
-    )
-    st.dataframe(
-        chart_source[
-            [
-                "Target Draw",
-                f"{detail_model} Top6",
-                f"{detail_model} Hit@4",
-                f"{detail_model} Hit@5",
-                f"{detail_model} Hit@6",
-            ]
-        ].tail(10),
-        hide_index=True,
-        width="stretch",
-    )
+    with tabs[4]:
+        st.subheader(f"Rolling Mean Hit@{selection_size}")
+        st.line_chart(rolling.set_index("Evaluation"), height=330)
+        detail_model = st.selectbox("Model detayı", selected_models)
+        description = MODEL_DESCRIPTIONS.get(detail_model)
+        if description is None:
+            description = baseline_descriptions[detail_model]
+        st.write(description)
+        config = AnalysisConfig()
+        detail_summary = ranking[ranking["Model"] == detail_model].iloc[0]
+        set_column = f"{detail_model} Set@6" if is_research else f"{detail_model} Top6"
+        left, right, third = st.columns(3)
+        left.metric("Son Set@6", backtest.iloc[-1][set_column])
+        right.metric(f"Mean Hit@{selection_size}", f"{detail_summary[f'Mean Hit@{selection_size}']:.3f}")
+        third.metric(f"Lift@{selection_size}", f"{detail_summary[f'Lift@{selection_size}']:.3f}")
+        if is_research:
+            st.caption("Research 2.0 · son 1.000 ardışık hedef · minimum eğitim 500")
+        else:
+            st.caption(
+                f"Strategy {config.strategy_version} · Config {config.config_version} · "
+                f"minimum eğitim {config.minimum_training_size}"
+            )
+        st.dataframe(
+            chart_source[[
+                "Target Draw", set_column, f"{detail_model} Hit@4",
+                f"{detail_model} Hit@5", f"{detail_model} Hit@6",
+            ]].tail(10),
+            hide_index=True,
+            width="stretch",
+        )
 
 elif page == "İstatistiksel Kontrol":
     import istatistik
