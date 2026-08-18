@@ -2,7 +2,6 @@ from itertools import combinations
 
 import numpy as np
 import pandas as pd
-from scipy.stats import binom
 
 from analysis.model import NUMBER_COUNT, combination_inclusion_probability
 from analysis.tail_metrics import benjamini_hochberg
@@ -81,6 +80,8 @@ def context_triple_scores(triple_counts, draw_count, latest_draw, minimum_suppor
 
 
 def significant_triple_diagnostics(triple_counts, draw_count, alpha=0.05, minimum_support=3):
+    from scipy.stats import binom
+
     probability = combination_inclusion_probability(3)
     counts = np.asarray(triple_counts, dtype=int)
     p_values = binom.sf(counts - 1, draw_count, probability)

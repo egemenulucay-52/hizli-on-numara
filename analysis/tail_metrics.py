@@ -2,7 +2,6 @@ from hashlib import sha256
 
 import numpy as np
 import pandas as pd
-from scipy.stats import beta, binom
 
 from analysis.benchmark import random_hit_probability
 from analysis.config import MODEL_NAMES
@@ -36,6 +35,8 @@ def objective_random_rate(objective, selection_size):
 
 
 def clopper_pearson_interval(successes, trials, confidence=0.95):
+    from scipy.stats import beta
+
     if trials < 1 or not 0 <= successes <= trials:
         raise ValueError("Başarı ve deneme sayıları geçersiz.")
     alpha = 1.0 - confidence
@@ -77,6 +78,8 @@ def summarize_tail_metrics(
     monte_carlo_samples=50_000,
 ):
     """Exact ve near-perfect tail metriklerini model/pencere bazında özetler."""
+
+    from scipy.stats import binom
 
     if results.empty:
         return pd.DataFrame()

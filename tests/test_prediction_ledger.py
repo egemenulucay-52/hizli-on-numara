@@ -1,5 +1,7 @@
 import json
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -64,6 +66,24 @@ class PredictionLedgerTests(unittest.TestCase):
         self.assertEqual(
             seal_event(payload, GENESIS_HASH), seal_event(payload, GENESIS_HASH)
         )
+
+    def test_live_entrypoint_imports_without_scipy(self):
+        root = Path(__file__).resolve().parents[1]
+        guard = (
+            "import builtins; original=builtins.__import__; "
+            "builtins.__import__=lambda name,*a,**k: "
+            "(_ for _ in ()).throw(ModuleNotFoundError(name)) "
+            "if name.startswith('scipy') else original(name,*a,**k); "
+            "import tahmin_guncelle"
+        )
+        completed = subprocess.run(
+            [sys.executable, "-c", guard],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
 
 
 if __name__ == "__main__":
