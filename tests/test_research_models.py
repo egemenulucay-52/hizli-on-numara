@@ -36,6 +36,9 @@ class ResearchModelTests(unittest.TestCase):
 
     def test_research_state_tracks_lags_decay_and_triples(self):
         state = self.state()
+        self.assertEqual(state.baseline.config.short_window, 10)
+        self.assertEqual(state.baseline.config.long_window, 50)
+        self.assertEqual(state.baseline.config.deviation_window, 50)
         self.assertEqual(
             int(state.triple_counts.sum()), 8 * len(DRAW_TRIPLE_POSITIONS)
         )

@@ -18,12 +18,12 @@ DEFAULT_MODEL_WEIGHTS = (
 class AnalysisConfig:
     """Tahmin deneyinin sürümlenebilir ve değiştirilemez ayarları."""
 
-    strategy_version: str = "1.0.0"
-    config_version: str = "1.0.0"
+    strategy_version: str = "1.1.0"
+    config_version: str = "1.1.0"
     minimum_training_size: int = 500
-    short_window: int = 15
-    long_window: int = 150
-    deviation_window: int = 150
+    short_window: int = 10
+    long_window: int = 50
+    deviation_window: int = 50
     structural_window: int = 50
     z_clip: float = 4.0
     model_weights: tuple[tuple[str, float], ...] = DEFAULT_MODEL_WEIGHTS

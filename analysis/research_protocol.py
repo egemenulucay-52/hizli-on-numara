@@ -11,6 +11,9 @@ import pandas as pd
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PROTOCOL_PATH = REPOSITORY_ROOT / "protocols" / "research_protocol_v1.json"
+DEFAULT_AMENDMENT_PATH = (
+    REPOSITORY_ROOT / "protocols" / "research_protocol_v1_amendment_001.json"
+)
 DEFAULT_MANIFEST_PATH = REPOSITORY_ROOT / "artifacts" / "research_split_manifest.csv"
 
 TRAINING_PHASE = "training_history"
@@ -51,6 +54,21 @@ def load_protocol(path=DEFAULT_PROTOCOL_PATH):
     if supplied_hash != expected_hash:
         raise ValueError("Research Protocol v1 hash doğrulaması başarısız.")
     return protocol
+
+
+def load_protocol_amendment(path=DEFAULT_AMENDMENT_PATH, protocol=None):
+    protocol = protocol or load_protocol()
+    with Path(path).open("r", encoding="utf-8") as stream:
+        amendment = json.load(stream)
+    supplied_hash = amendment.get("amendment_hash")
+    unsigned = {
+        key: value for key, value in amendment.items() if key != "amendment_hash"
+    }
+    if supplied_hash != object_hash(unsigned):
+        raise ValueError("Research Protocol v1 amendment hash doğrulaması başarısız.")
+    if amendment.get("parent_protocol_hash") != protocol["protocol_hash"]:
+        raise ValueError("Protocol amendment parent hash ile uyuşmuyor.")
+    return amendment
 
 
 def load_split_manifest(
@@ -99,12 +117,15 @@ def assert_target_ids_do_not_include_locked(target_ids, manifest=None):
         )
 
 
-def protocol_ledger_metadata(protocol=None):
+def protocol_ledger_metadata(protocol=None, amendment=None):
     protocol = protocol or load_protocol()
+    amendment = amendment or load_protocol_amendment(protocol=protocol)
     final_locked = protocol["model_lock"]["status"] == "final_model_locked"
     return {
         "research_protocol_version": protocol["protocol_version"],
         "research_protocol_hash": protocol["protocol_hash"],
+        "research_protocol_amendment_version": amendment["amendment_version"],
+        "research_protocol_amendment_hash": amendment["amendment_hash"],
         "evaluation_phase": (
             "prospective_live_confirmatory"
             if final_locked

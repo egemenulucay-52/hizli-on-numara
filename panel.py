@@ -5,7 +5,11 @@ import streamlit as st
 
 from analysis.model_registry import MODEL_DESCRIPTIONS, RESEARCH_MODEL_NAMES
 from analysis.prediction_ledger import pending_predictions, read_ledger
-from analysis.research_protocol import load_protocol, load_split_manifest
+from analysis.research_protocol import (
+    load_protocol,
+    load_protocol_amendment,
+    load_split_manifest,
+)
 from analysis.descriptive import (
     block_summary,
     ending_digit_summary,
@@ -88,12 +92,14 @@ def load_prediction_events(path, modified_time):
 
 
 @st.cache_data(show_spinner=False)
-def load_research_protocol(protocol_mtime, manifest_mtime):
-    del protocol_mtime, manifest_mtime
+def load_research_protocol(protocol_mtime, amendment_mtime, manifest_mtime):
+    del protocol_mtime, amendment_mtime, manifest_mtime
     try:
-        return load_protocol(), load_split_manifest(), ""
+        protocol = load_protocol()
+        amendment = load_protocol_amendment(protocol=protocol)
+        return protocol, amendment, load_split_manifest(), ""
     except (OSError, ValueError) as error:
-        return {}, pd.DataFrame(), str(error)
+        return {}, {}, pd.DataFrame(), str(error)
 
 
 @st.cache_data(ttl=600, show_spinner=False)
@@ -229,7 +235,7 @@ elif page == "Keşifsel Analiz":
         "Kısa dönem",
         min_value=short_min,
         max_value=short_max,
-        value=min(15, short_max),
+        value=min(10, short_max),
     )
     long_options = sorted(
         {min(candidate, analysis_window) for candidate in (50, 150, 500, analysis_window)}
@@ -237,7 +243,7 @@ elif page == "Keşifsel Analiz":
     long_window = st.sidebar.select_slider(
         "Uzun dönem",
         options=long_options,
-        value=min(150, analysis_window),
+        value=min(50, analysis_window),
     )
 
     frequency = cached_number_summary(analysis_df, short_window, long_window)
@@ -246,7 +252,8 @@ elif page == "Keşifsel Analiz":
     st.subheader("Sayı frekansları")
     st.caption(
         "Frequency Momentum = kısa dönem görülme oranı − uzun dönem görülme oranı. "
-        "Pozitif değer yalnızca yakın dönemdeki göreli artışı betimler."
+        "Varsayılan pencereler 10/50'dir. Pozitif değer yalnızca yakın dönemdeki "
+        "göreli artışı betimler; tahmin avantajı kanıtlamaz."
     )
     st.bar_chart(frequency.set_index("Number")[["Long Observed"]], height=320)
     st.dataframe(
@@ -285,9 +292,11 @@ elif page == "İkili ve Kombinasyonlar":
 
 elif page == "Araştırma Protokolü":
     protocol_path = "protocols/research_protocol_v1.json"
+    amendment_path = "protocols/research_protocol_v1_amendment_001.json"
     manifest_path = "artifacts/research_split_manifest.csv"
-    protocol, manifest, protocol_error = load_research_protocol(
+    protocol, amendment, manifest, protocol_error = load_research_protocol(
         os.path.getmtime(protocol_path) if os.path.exists(protocol_path) else None,
+        os.path.getmtime(amendment_path) if os.path.exists(amendment_path) else None,
         os.path.getmtime(manifest_path) if os.path.exists(manifest_path) else None,
     )
     st.subheader("Research Protocol v1")
@@ -300,7 +309,10 @@ elif page == "Araştırma Protokolü":
         st.stop()
 
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Protokol", protocol["protocol_version"])
+    col1.metric(
+        "Protokol",
+        f"{protocol['protocol_version']} + ek {amendment['amendment_version']}",
+    )
     col2.metric("Durum", "Seçim protokolü kilitli")
     col3.metric("Final model", "Henüz kilitlenmedi")
     col4.metric("Kilitli hedef", f"{protocol['splits']['retrospective_locked_candidate']['eligible_target_count']:,}")
@@ -334,12 +346,21 @@ elif page == "Araştırma Protokolü":
             }
         )
     st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
+    st.info(
+        "Final model kilidinden önce onaylanan ek 001 ile canlı Research 2.1 "
+        "frekans pencereleri kısa=10, uzun=50 ve sapma=50 olarak değiştirildi. "
+        "Decay=100 ve yapısal pencere=50 değişmedi."
+    )
     st.warning(
         "Kilitli tarihsel bölüm, modellerin geçmişin tamamı geliştirme sırasında "
         "görülmüş olduğu için yalnız geriye dönük dayanıklılık denetimi sayılır. "
         "Gerçek doğrulayıcı kanıt final model kilidinden sonraki canlı tahminlerdir."
     )
-    st.code(protocol["protocol_hash"], language=None)
+    st.code(
+        f"protocol={protocol['protocol_hash']}\n"
+        f"amendment={amendment['amendment_hash']}",
+        language=None,
+    )
 
 elif page == "Canlı Tahmin":
     ledger_mtime = (
@@ -380,6 +401,13 @@ elif page == "Canlı Tahmin":
     col3.metric("Durum", status)
     col4.metric("Canlı değerlendirme", len(evaluated))
     col5.metric("Araştırma fazı", displayed_phase)
+    if displayed.get("research_version") == "2.1.0":
+        st.caption("Aktif canlı konfigürasyon: Research 2.1 · kısa=10 · uzun=50 · sapma=50")
+    else:
+        st.caption(
+            "Gösterilen kayıt legacy Research 2.0 olabilir. İlk uygun yeni tahmin "
+            "Research 2.1 ve 10/50 pencereleriyle oluşturulacaktır."
+        )
 
     research_results_mtime = (
         os.path.getmtime(RESEARCH_SUMMARY) if os.path.exists(RESEARCH_SUMMARY) else None
@@ -682,8 +710,8 @@ elif page == "Model Karşılaştırma":
         right.metric(f"Mean Hit@{selection_size}", f"{detail_summary[f'Mean Hit@{selection_size}']:.3f}")
         third.metric(f"Lift@{selection_size}", f"{detail_summary[f'Lift@{selection_size}']:.3f}")
         st.caption(
-            "Research 2.0 · kontamine son 1.000 ardışık hedef · minimum eğitim 500 · "
-            "yalnız keşifsel"
+            "Legacy Research 2.0 · 15/150 pencereleri · kontamine son 1.000 "
+            "ardışık hedef · yalnız keşifsel. Canlı Research 2.1, 10/50 kullanır."
         )
         st.dataframe(
             chart_source[[

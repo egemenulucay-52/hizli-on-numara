@@ -5,8 +5,12 @@ import json
 
 @dataclass(frozen=True)
 class ResearchConfig:
-    research_version: str = "2.0.0"
+    research_version: str = "2.1.0"
     minimum_training_size: int = 500
+    short_window: int = 10
+    long_window: int = 50
+    deviation_window: int = 50
+    structural_window: int = 50
     decay_half_life: float = 100.0
     bayesian_prior_strength: float = 40.0
     significant_min_support: int = 30
@@ -40,6 +44,15 @@ class ResearchConfig:
             raise ValueError("Beam width pozitif olmalıdır.")
         if self.m10_update_interval < 1:
             raise ValueError("M10 update interval pozitif olmalıdır.")
+        if min(
+            self.short_window,
+            self.long_window,
+            self.deviation_window,
+            self.structural_window,
+        ) < 1:
+            raise ValueError("Araştırma pencereleri pozitif olmalıdır.")
+        if self.short_window > self.long_window:
+            raise ValueError("short_window, long_window değerinden büyük olamaz.")
         if abs(sum(weight for _, weight in self.joint_weights) - 1.0) > 1e-12:
             raise ValueError("Joint objective ağırlıkları toplamı 1 olmalıdır.")
 
@@ -51,6 +64,10 @@ class ResearchConfig:
         return {
             "research_version": self.research_version,
             "minimum_training_size": self.minimum_training_size,
+            "short_window": self.short_window,
+            "long_window": self.long_window,
+            "deviation_window": self.deviation_window,
+            "structural_window": self.structural_window,
             "decay_half_life": self.decay_half_life,
             "bayesian_prior_strength": self.bayesian_prior_strength,
             "significant_min_support": self.significant_min_support,

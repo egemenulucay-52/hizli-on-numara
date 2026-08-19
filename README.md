@@ -75,10 +75,24 @@ Protokol, geçmiş hedefleri kronolojik ve değiştirilemez bir manifestle ayır
 
 `protocols/research_protocol_v1.json` protokol kararlarını, konfigürasyon
 hash'lerini ve birincil ölçüt olan Mean Hit@6'yı sabitler.
+`protocols/research_protocol_v1_amendment_001.json`, final model kilidinden önce
+onaylanan 10/50 frekans denemesini ana protokol hash'ine bağlar.
 `artifacts/research_split_manifest.csv` her çekilişin fazını taşır. Mevcut
 modeller geliştirilirken geçmişin tamamı daha önce görüldüğü için kilitli bölüm
 yalnız retrospective audit/backcast sayılır; gerçek confirmatory değerlendirme,
 final model kilidinden sonraki canlı tahminlerle başlayacaktır.
+
+Aktif canlı Research 2.1 ayarları:
+
+- M1 kısa frekans: son 10 çekiliş.
+- M1 uzun frekans: son 50 çekiliş.
+- M2 teorik frekans sapması: son 50 çekiliş.
+- M6 yapısal pencere: 50 çekiliş; değişmedi.
+- M4-B decay yarılanma ömrü: 100 çekiliş; değişmedi.
+
+Repodaki 1.000 hedeflik tarihsel araştırma artefaktları Research 2.0 ve 15/150
+ayarlarıyla üretildiğinden legacy/keşifsel olarak etiketlenir. 10/50 değişikliği
+bu sonuçların üzerine yazılmaz ve locked holdout üzerinde çalıştırılmaz.
 
 ## Veri şeması
 
@@ -133,6 +147,8 @@ eklemez. Günlük `artifacts/prediction_ledger.jsonl` dosyasındadır; her olay 
 önceki olayın özetini taşıdığı için geçmiş kayıt değişiklikleri doğrulanabilir.
 Final model kilitlenene kadar yeni kayıtlar
 `protocol_v1_observational_prelock` olarak etiketlenir ve confirmatory sayılmaz.
+Research 2.0 M10 ağırlıkları Research 2.1 özellikleriyle karıştırılmaz; yeni
+konfigürasyon eşleşen bir state oluşana kadar temiz M10 durumuyla başlar.
 
 ## Streamlit Community Cloud
 

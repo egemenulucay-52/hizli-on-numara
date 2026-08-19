@@ -2,6 +2,8 @@ import json
 from pathlib import Path
 import unittest
 
+from analysis.config import AnalysisConfig
+from analysis.research_config import ResearchConfig
 from analysis.research_protocol import (
     CONTAMINATED_PHASE,
     DEVELOPMENT_PHASE,
@@ -10,7 +12,9 @@ from analysis.research_protocol import (
     assert_phase_is_unlocked,
     assert_target_ids_do_not_include_locked,
     load_protocol,
+    load_protocol_amendment,
     load_split_manifest,
+    protocol_ledger_metadata,
     target_ids_for_phase,
 )
 
@@ -21,6 +25,28 @@ class ResearchProtocolTests(unittest.TestCase):
         manifest = load_split_manifest()
         self.assertEqual(protocol["protocol_version"], "1.0.0")
         self.assertEqual(len(manifest), 17552)
+
+    def test_frequency_window_amendment_is_hash_chained_to_protocol(self):
+        protocol = load_protocol()
+        amendment = load_protocol_amendment(protocol=protocol)
+        self.assertEqual(amendment["amendment_version"], "001")
+        self.assertEqual(amendment["parent_protocol_hash"], protocol["protocol_hash"])
+        self.assertEqual(amendment["changes"]["short_window"]["to"], 10)
+        self.assertEqual(amendment["changes"]["long_window"]["to"], 50)
+        self.assertEqual(amendment["changes"]["deviation_window"]["to"], 50)
+        self.assertEqual(
+            amendment["configuration"]["analysis_config_hash"],
+            AnalysisConfig().config_hash,
+        )
+        self.assertEqual(
+            amendment["configuration"]["research_config_hash"],
+            ResearchConfig().config_hash,
+        )
+        metadata = protocol_ledger_metadata(protocol=protocol, amendment=amendment)
+        self.assertEqual(metadata["research_protocol_amendment_version"], "001")
+        self.assertEqual(
+            metadata["research_protocol_amendment_hash"], amendment["amendment_hash"]
+        )
 
     def test_approved_plan_b_counts_are_exact(self):
         manifest = load_split_manifest()
