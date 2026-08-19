@@ -12,7 +12,7 @@ def _window_size(df, requested):
     return min(requested, len(df))
 
 
-def number_frequency_summary(df, number_columns, short_window=15, long_window=150):
+def number_frequency_summary(df, number_columns, short_window=10, long_window=50):
     """Kısa ve uzun dönem sayı frekanslarını tahmin yorumu eklemeden özetler."""
     short_size = _window_size(df, short_window)
     long_size = _window_size(df, long_window)

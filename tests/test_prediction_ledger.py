@@ -9,12 +9,15 @@ from analysis.prediction_ledger import (
     GENESIS_HASH,
     append_events,
     compact_models,
+    latest_m10_state,
     pending_predictions,
     prediction_created_payload,
     prediction_evaluated_payload,
     read_ledger,
     seal_event,
 )
+from analysis.research_config import ResearchConfig
+from tahmin_guncelle import load_historical_m10_state
 
 
 class PredictionLedgerTests(unittest.TestCase):
@@ -78,6 +81,8 @@ class PredictionLedgerTests(unittest.TestCase):
             protocol_metadata={
                 "research_protocol_version": "1.0.0",
                 "research_protocol_hash": "protocol-hash",
+                "research_protocol_amendment_version": "001",
+                "research_protocol_amendment_hash": "amendment-hash",
                 "evaluation_phase": "protocol_v1_observational_prelock",
             },
         )
@@ -85,6 +90,48 @@ class PredictionLedgerTests(unittest.TestCase):
             payload["evaluation_phase"], "protocol_v1_observational_prelock"
         )
         self.assertEqual(payload["research_protocol_hash"], "protocol-hash")
+        self.assertEqual(
+            payload["research_protocol_amendment_hash"], "amendment-hash"
+        )
+
+    def test_latest_m10_state_is_scoped_to_config_hash(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "ledger.jsonl"
+            created = append_events(path, [], [self.prediction_payload()])
+            evaluated = prediction_evaluated_payload(
+                created_event=created[0],
+                actual_numbers=range(1, 21),
+                m10_state_after={"weights": [0.1], "bias": -1.0},
+            )
+            append_events(path, created, [evaluated])
+            events = read_ledger(path)
+            fallback = {"weights": [0.0], "bias": 0.0}
+            self.assertEqual(
+                latest_m10_state(events, fallback, config_hash="abc")["bias"],
+                -1.0,
+            )
+            self.assertEqual(
+                latest_m10_state(events, fallback, config_hash="new-config"),
+                fallback,
+            )
+
+    def test_legacy_m10_artifact_is_reset_for_new_config(self):
+        with tempfile.TemporaryDirectory() as directory:
+            state_path = Path(directory) / "state.json"
+            metadata_path = Path(directory) / "metadata.json"
+            state_path.write_text(
+                json.dumps({"M10": {"weights": [99.0], "bias": 99.0}}),
+                encoding="utf-8",
+            )
+            metadata_path.write_text(
+                json.dumps({"research_config_hash": "legacy-config"}),
+                encoding="utf-8",
+            )
+            config = ResearchConfig()
+            state = load_historical_m10_state(state_path, metadata_path, config)
+            self.assertEqual(state["step"], 0)
+            self.assertAlmostEqual(state["bias"], -1.0986122886681098)
+            self.assertTrue(all(weight == 0.0 for weight in state["weights"]))
 
     def test_live_entrypoint_imports_without_scipy(self):
         root = Path(__file__).resolve().parents[1]

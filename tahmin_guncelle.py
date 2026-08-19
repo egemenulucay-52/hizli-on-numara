@@ -39,7 +39,19 @@ def load_draws(path):
     return cekilisleri_sirala(data)
 
 
-def load_historical_m10_state(path):
+def empty_m10_state(config):
+    return OnlineLogisticRanker(
+        M10_FEATURE_NAMES,
+        learning_rate=config.m10_learning_rate,
+        l2=config.m10_l2,
+    ).state_dict()
+
+
+def load_historical_m10_state(path, metadata_path, config):
+    with Path(metadata_path).open("r", encoding="utf-8") as stream:
+        metadata = json.load(stream)
+    if metadata.get("research_config_hash") != config.config_hash:
+        return empty_m10_state(config)
     with Path(path).open("r", encoding="utf-8") as stream:
         stored = json.load(stream)
     return stored["M10"]
@@ -61,7 +73,9 @@ def update_live_ledger(draws, ledger_path, historical_state, config=None):
         str(row["CekilisNo"]): row[SAYI_KOLONLARI].to_numpy(dtype=int)
         for _, row in draws.iterrows()
     }
-    m10_state = latest_m10_state(events, historical_state)
+    m10_state = latest_m10_state(
+        events, historical_state, config_hash=config.config_hash
+    )
     protocol_metadata = protocol_ledger_metadata()
 
     for created in sorted(
@@ -70,19 +84,20 @@ def update_live_ledger(draws, ledger_path, historical_state, config=None):
         target_draw = str(created["target_draw"])
         if target_draw not in actual_by_id:
             continue
-        prediction_state = created["m10_state"]
-        history = rows_through(draws, created["train_end_draw"])
-        _, _, bundle = current_research_predictions(
-            history, config=config, m10_state=prediction_state
-        )
-        ranker = OnlineLogisticRanker(
-            M10_FEATURE_NAMES,
-            learning_rate=config.m10_learning_rate,
-            l2=config.m10_l2,
-            state=prediction_state,
-        )
-        ranker.update(bundle["features"], actual_by_id[target_draw])
-        m10_state = ranker.state_dict()
+        if created.get("config_hash") == config.config_hash:
+            prediction_state = created["m10_state"]
+            history = rows_through(draws, created["train_end_draw"])
+            _, _, bundle = current_research_predictions(
+                history, config=config, m10_state=prediction_state
+            )
+            ranker = OnlineLogisticRanker(
+                M10_FEATURE_NAMES,
+                learning_rate=config.m10_learning_rate,
+                l2=config.m10_l2,
+                state=prediction_state,
+            )
+            ranker.update(bundle["features"], actual_by_id[target_draw])
+            m10_state = ranker.state_dict()
         new_payloads.append(
             prediction_evaluated_payload(
                 created_event=created,
@@ -121,15 +136,20 @@ def parse_args():
     parser.add_argument(
         "--model-state", default="artifacts/research_model_state.json"
     )
+    parser.add_argument(
+        "--research-metadata", default="artifacts/research_metadata.json"
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
+    config = ResearchConfig()
     appended = update_live_ledger(
         load_draws(args.csv),
         args.ledger,
-        load_historical_m10_state(args.model_state),
+        load_historical_m10_state(args.model_state, args.research_metadata, config),
+        config=config,
     )
     if appended:
         event_types = ", ".join(event["event_type"] for event in appended)

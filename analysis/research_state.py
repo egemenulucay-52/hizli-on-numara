@@ -16,7 +16,11 @@ class ResearchState:
     def __init__(self, config=None):
         self.config = config or ResearchConfig()
         baseline_config = AnalysisConfig(
-            minimum_training_size=self.config.minimum_training_size
+            minimum_training_size=self.config.minimum_training_size,
+            short_window=self.config.short_window,
+            long_window=self.config.long_window,
+            deviation_window=self.config.deviation_window,
+            structural_window=self.config.structural_window,
         )
         self.baseline = IncrementalAnalysisState(baseline_config)
         lag_count = len(self.config.multi_lag_weights)

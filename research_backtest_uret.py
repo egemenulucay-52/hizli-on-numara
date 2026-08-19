@@ -15,6 +15,7 @@ from analysis.research_protocol import (
     DEVELOPMENT_PHASE,
     VALIDATION_PHASE,
     load_protocol,
+    load_protocol_amendment,
     target_ids_for_phase,
 )
 from analysis.tail_metrics import summarize_tail_metrics
@@ -89,6 +90,7 @@ def main():
         encoding="utf-8",
     )
     protocol = load_protocol()
+    amendment = load_protocol_amendment(protocol=protocol)
     metadata = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "data_fingerprint": run.data_fingerprint,
@@ -100,6 +102,8 @@ def main():
         "evaluation_phase": phase,
         "research_protocol_version": protocol["protocol_version"],
         "research_protocol_hash": protocol["protocol_hash"],
+        "research_protocol_amendment_version": amendment["amendment_version"],
+        "research_protocol_amendment_hash": amendment["amendment_hash"],
         "confirmatory_use": False,
         "ensemble_v2_enabled": False,
     }

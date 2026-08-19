@@ -134,11 +134,21 @@ def pending_predictions(events):
     ]
 
 
-def latest_m10_state(events, fallback_state):
+def latest_m10_state(events, fallback_state, config_hash=None):
+    created_by_hash = {
+        event.get("event_hash"): event
+        for event in events
+        if event.get("event_type") == "prediction_created"
+    }
     for event in reversed(events):
         state = event.get("m10_state_after")
-        if event.get("event_type") == "prediction_evaluated" and state:
-            return state
+        if event.get("event_type") != "prediction_evaluated" or not state:
+            continue
+        if config_hash is not None:
+            created = created_by_hash.get(event.get("created_event_hash"))
+            if created is None or created.get("config_hash") != config_hash:
+                continue
+        return state
     return fallback_state
 
 

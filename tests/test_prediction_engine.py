@@ -40,6 +40,9 @@ class PredictionEngineTests(unittest.TestCase):
         self.assertEqual(tuple(config.weights), MODEL_NAMES)
         self.assertAlmostEqual(sum(config.weights.values()), 1.0)
         self.assertEqual(len(config.config_hash), 64)
+        self.assertEqual(config.short_window, 10)
+        self.assertEqual(config.long_window, 50)
+        self.assertEqual(config.deviation_window, 50)
 
     def test_all_models_produce_finite_normalized_rankings(self):
         config = AnalysisConfig(

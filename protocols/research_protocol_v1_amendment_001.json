@@ -1,0 +1,53 @@
+{
+  "amendment_version": "001",
+  "amendment_status": "approved_before_final_model_lock",
+  "approved_by": "repository_owner",
+  "approved_date": "2026-08-19",
+  "parent_protocol_version": "1.0.0",
+  "parent_protocol_hash": "d3af0784210d3126585a18e6612bfff088bd8a8a52887572d923200fde6124e1",
+  "parent_selection_lock_tag": "research-protocol-v1-selection-lock",
+  "rationale": "Uzun frekans pencerelerinin oranları teorik taban orana yaklaştırıp kısa dönemli değişimleri bastırabileceği hipotezini, final model kilidinden önce daha duyarlı 10/50 pencereleriyle incelemek.",
+  "changes": {
+    "short_window": {
+      "from": 15,
+      "to": 10
+    },
+    "long_window": {
+      "from": 150,
+      "to": 50
+    },
+    "deviation_window": {
+      "from": 150,
+      "to": 50
+    }
+  },
+  "unchanged": {
+    "minimum_training_size": 500,
+    "structural_window": 50,
+    "decay_half_life": 100.0,
+    "multi_lag_weights": [
+      1.0,
+      0.6,
+      0.35
+    ],
+    "locked_split": "retrospective_locked_candidate",
+    "locked_target_count": 5922
+  },
+  "configuration": {
+    "analysis_version": "1.1.0",
+    "analysis_config_hash": "333f2c0c3e7997ed3390b85f1de5e23771f8bd9820ad04f7837a93e0f468a936",
+    "research_version": "2.1.0",
+    "research_config_hash": "8f89bb3b49fcbc520167f974e16fa2c66d39f38312c99f618ac4056f430979e6"
+  },
+  "m10_transition": {
+    "reuse_legacy_state": false,
+    "rule": "Research 2.0 ile üretilmiş M10 ağırlıkları 10/50 özellikleriyle kullanılmaz. Eşleşen Research 2.1 state bulunana kadar sıfır durumundan başlanır."
+  },
+  "evaluation_rules": {
+    "locked_holdout_access": "unchanged_denied",
+    "historical_research_artifacts": "legacy_2.0_exploratory_only",
+    "new_live_predictions": "protocol_v1_observational_prelock",
+    "confirmatory_status": "not_started"
+  },
+  "amendment_hash": "46f0f48e9ea6489021c8ecc33270cb24d5ea2752e5be71e046147410cbcde039"
+}
